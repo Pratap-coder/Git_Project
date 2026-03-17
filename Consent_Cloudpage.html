@@ -1,0 +1,237 @@
+<!-- 
+%%[
+    /* --- 1. INITIALIZATION --- */
+    VAR @subscriberKey, @emailAddress, @submitted, @now, @mobileNumberRowSet
+    VAR @EmailMarketingConsentcheckbox, @SMSMarketingConsentcheckbox, @WhatsappMarketingConsentcheckbox
+    VAR @EmailMarketingConsent, @SMSMarketingConsent, @WhatsappMarketingConsent
+    VAR @crmRow, @EmailMarketingConsentOld, @SMSMarketingConsentOld, @WhatsappMarketingConsentOld
+    VAR @updateRecord, @Subscriber, @Status, @createErrDesc, @createErrNo, @createOpts
+    VAR @contactRows, @contactRow, @EmailMarketingConsentchecked, @SMSMarketingConsentchecked, @Whatsappmarketingconsentchecked
+
+    SET @subscriberKey = AttributeValue("_subscriberKey")
+    SET @emailAddress = AttributeValue("emailaddr")
+    
+    /* Fetch Mobile Number from SFDC */
+    SET @mobileNumberRowSet = RetrieveSalesforceObjects("Contact", "MobilePhone", "Id", "=", @subscriberKey)
+    
+    /* Date Formatting */
+    SET @now = DateAdd(Now(), 8, "H")
+    SET @now = Format(@now, "yyyy-MM-ddTHH:mm:ss")
+    
+    SET @submitted = RequestParameter("submitted")
+
+    /* --- 2. PROCESSING FORM SUBMISSION --- */
+    IF @submitted == "true" THEN
+        
+        /* Capture HTML Checkbox states (return "on" or null) */
+        SET @EmailMarketingConsentcheckbox = RequestParameter("EmailMarketingConsent")
+        SET @SMSMarketingConsentcheckbox = RequestParameter("SMSMarketingConsent")
+        SET @WhatsappMarketingConsentcheckbox = RequestParameter("WhatsappMarketingConsent")
+
+        /* Convert "on" to "true"/"false" strings for SFDC */
+        SET @EmailMarketingConsent = IIF(@EmailMarketingConsentcheckbox == "on", "true", "false")
+        SET @SMSMarketingConsent = IIF(@SMSMarketingConsentcheckbox == "on", "true", "false")
+        SET @WhatsappMarketingConsent = IIF(@WhatsappMarketingConsentcheckbox == "on", "true", "false")
+
+        /* Retrieve current SFDC values to compare changes */
+        SET @crmRow = RetrieveSalesforceObjects("Contact", "Optin_MarketingEmail__c, Optin_SMS__c, Optin_Whatsapp__c", "Id", "=", @subscriberKey)
+        
+        IF RowCount(@crmRow) > 0 THEN
+            SET @EmailMarketingConsentOld = Field(Row(@crmRow, 1), "Optin_MarketingEmail__c")
+            SET @SMSMarketingConsentOld = Field(Row(@crmRow, 1), "Optin_SMS__c")
+            SET @WhatsappMarketingConsentOld = Field(Row(@crmRow, 1), "Optin_Whatsapp__c")
+        ELSE
+            /* Default values if record not found */
+            SET @EmailMarketingConsentOld = "false"
+            SET @SMSMarketingConsentOld = "false"
+            SET @WhatsappMarketingConsentOld = "false"
+        ENDIF
+
+        /* --- 3. SYNC LOGIC: EMAIL (Update SFDC + SFMC All Subs) --- */
+        IF @EmailMarketingConsentOld != @EmailMarketingConsent THEN
+            
+            /* Update Salesforce CRM */
+            SET @updateRecord = UpdateSingleSalesforceObject("Contact", @subscriberKey, "Optin_MarketingEmail__c", @EmailMarketingConsent)
+            
+            /* Logic for Unsubscribe vs Subscribe */
+            IF @EmailMarketingConsent == "false" THEN
+                SET @updateRecord = UpdateSingleSalesforceObject("Contact", @subscriberKey, "HasOptedOutOfEmail", "true")
+                SET @Status = "unsubscribed"
+            ELSE
+                SET @updateRecord = UpdateSingleSalesforceObject("Contact", @subscriberKey, "HasOptedOutOfEmail", "false")
+                SET @Status = "active"
+            ENDIF
+
+            /* Update SFMC Subscriber Status via SOAP API */
+            SET @Subscriber = CreateObject("Subscriber")
+            SetObjectProperty(@Subscriber, "SubscriberKey", @subscriberKey)
+            SetObjectProperty(@Subscriber, "EmailAddress", @emailAddress)
+            SetObjectProperty(@Subscriber, "Status", @Status)
+            SET @Status = InvokeUpdate(@Subscriber, @createErrDesc, @createErrNo, @createOpts)
+        ENDIF
+
+        /* --- 4. SYNC LOGIC: SMS --- */
+        IF @SMSMarketingConsentOld != @SMSMarketingConsent THEN
+            SET @updateRecord = UpdateSingleSalesforceObject("Contact", @subscriberKey, "Optin_SMS__c", @SMSMarketingConsent)
+        ENDIF
+
+        /* --- 5. SYNC LOGIC: WHATSAPP --- */
+        IF @WhatsappMarketingConsentOld != @WhatsappMarketingConsent THEN
+            SET @updateRecord = UpdateSingleSalesforceObject("Contact", @subscriberKey, "Optin_Whatsapp__c", @WhatsappMarketingConsent)
+        ENDIF
+
+    ENDIF
+
+    /* --- 6. PRE-POPULATE FORM FIELDS --- */
+    SET @contactRows = RetrieveSalesforceObjects("Contact", "Optin_MarketingEmail__c, Optin_SMS__c, Optin_Whatsapp__c", "Id", "=", @subscriberKey)
+    
+    IF RowCount(@contactRows) == 1 THEN
+        SET @contactRow = Row(@contactRows, 1)
+        
+        SET @EmailMarketingConsent = Field(@contactRow, "Optin_MarketingEmail__c")
+        SET @SMSMarketingConsent = Field(@contactRow, "Optin_SMS__c")
+        SET @WhatsappMarketingConsent = Field(@contactRow, "Optin_Whatsapp__c")
+
+        /* Set checked attribute for HTML switches */
+        SET @EmailMarketingConsentchecked = IIF(@EmailMarketingConsent == "true" OR @EmailMarketingConsent == "True", "checked", "")
+        SET @SMSMarketingConsentchecked = IIF(@SMSMarketingConsent == "true" OR @SMSMarketingConsent == "True", "checked", "")
+        SET @Whatsappmarketingconsentchecked = IIF(@WhatsappMarketingConsent == "true" OR @WhatsappMarketingConsent == "True", "checked", "")
+    ENDIF
+]%% -->
+<!DOCTYPE html>
+<html lang="en"></html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consent Cloudpage</title>
+
+    <style>
+    /* Container Styles */
+    .pref-container {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 10px;
+    }
+
+    /* Individual Row */
+    .pref-row {
+        background-color: #f4faff; /* Light blue background */
+        border-radius: 4px;
+        padding: 15px 20px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    /* The Switch - Box Container */
+    .switch {
+        position: relative;
+        display: inline-block;
+        min-width: 50px;
+        height: 24px;
+        flex-shrink: 0;
+    }
+
+    /* Hide default HTML checkbox */
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    /* The Slider/Track */
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccd6dd; /* Gray off-state */
+        transition: .4s;
+        border-radius: 34px;
+    }
+
+    /* The Circle Handle */
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: #a0abb6; /* Darker gray handle for OFF */
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    /* Colors when Checked (ON State) */
+    input:checked + .slider {
+        background-color: #c0ebd7; /* Light green track */
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(26px);
+        background-color: #1a5e4e; /* Dark teal handle */
+    }
+
+    /* Label Text Styling */
+    .pref-text {
+        font-size: 14px;
+        color: #333;
+        line-height: 1.4;
+    }
+
+    /* Responsive adjustment for small screens */
+    @media (max-width: 480px) {
+        .pref-row {
+            padding: 12px;
+            gap: 15px;
+        }
+        .pref-text {
+            font-size: 13px;
+        }
+    }
+</style>
+</head>
+
+<body>
+<div class="pref-container">
+
+    <!-- Row 1 -->
+    <div class="pref-row">
+        <label class="switch">
+            <input type="checkbox" name="Email_Promo" checked>
+            <span class="slider"></span>
+        </label>
+        <div class="pref-text">
+            Je souhaite recevoir par email des offres de services et d’informations promotionnelles de la part de Biogaran.
+        </div>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="pref-row">
+        <label class="switch">
+            <input type="checkbox" name="SMS_Promo">
+            <span class="slider"></span>
+        </label>
+        <div class="pref-text">
+            Je souhaite recevoir par SMS des offres de services et d’informations promotionnelles de la part de Biogaran.
+        </div>
+    </div>
+
+    <!-- Row 3 -->
+    <div class="pref-row">
+        <label class="switch">
+            <input type="checkbox" name="SMS_Transactional" checked>
+            <span class="slider"></span>
+        </label>
+        <div class="pref-text">
+            Je souhaite recevoir par SMS des informations transactionnelles (ex : suivi des commandes) de la part de Biogaran.
+        </div>
+    </div>
+</div>
+</body>
+</html>

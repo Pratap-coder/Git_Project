@@ -1,0 +1,219 @@
+<script runat="server">
+    Platform.Load("Core", "1");
+    // 1. SECURITY HEADERS: Prevents the page from being loaded in an iframe or hacked via browser scripts
+    // Prevent the page from being framed (Anti-Clickjacking)
+    Platform.Response.SetResponseHeader("X-Frame-Options", "Deny");
+    // Enable XSS protection in older browsers
+    Platform.Response.SetResponseHeader("X-XSS-Protection", "1; mode=block");
+    // Prevent browsers from guessing MIME types
+    Platform.Response.SetResponseHeader("X-Content-Type-Options", "nosniff");
+    // Enforce HTTPS
+    Platform.Response.SetResponseHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    // Restrict where resources (JS/CSS) can be loaded from
+    Platform.Response.SetResponseHeader("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';");
+</script>
+
+<!--
+%%[
+/* --- 1. ACCESS CONTROL --- */
+/* AttributeValue("_subscriberKey") only works if the link was generated using CloudPagesURL() in an email */
+SET @subKey = AttributeValue("_subscriberKey")
+SET @email = AttributeValue("emailaddr")
+SET @isSubmitted = RequestParameter("submitted")
+SET @tsExternalKey = "YOUR_CONFIRMATION_EMAIL_EXTERNAL_KEY"
+
+/* If no subKey is found (Direct Access), redirect to your website */
+IF EMPTY(@subKey) THEN 
+    Redirect("https://www.biogaran.fr/", true) 
+ENDIF 
+
+/* --- 2. FORM SUBMISSION LOGIC --- */
+IF @isSubmitted == "true" THEN
+    
+    /* BOT PROTECTION: Honeypot check */
+    SET @honeypot = RequestParameter("mid_name_field")
+    
+    IF EMPTY(@honeypot) THEN
+        /* Capture Form Inputs */
+        SET @Order_Email = "True"
+        SET @Order_SMS = IIF(RequestParameter("order_sms") == "on", "True", "False")
+        SET @Notif_Email = IIF(RequestParameter("notif_email") == "on", "True", "False")
+        SET @Notif_SMS = IIF(RequestParameter("notif_sms") == "on", "True", "False")
+        SET @Prod_Email = IIF(RequestParameter("prod_email") == "on", "True", "False")
+        SET @Prod_SMS = IIF(RequestParameter("prod_sms") == "on", "True", "False")
+        SET @Promo_Email = IIF(RequestParameter("promo_email") == "on", "True", "False")
+
+        /* UPDATE SFMC DATA EXTENSION */
+        UpsertData("Communication_Preferences", 1, "SubscriberKey", @subKey, 
+            "Order_SMS", @Order_SMS, 
+            "Notif_Email", @Notif_Email, 
+            "Notif_SMS", @Notif_SMS, 
+            "Prod_Email", @Prod_Email, 
+            "Prod_SMS", @Prod_SMS, 
+            "Promo_Email", @Promo_Email
+        )
+
+        /* UPDATE SALESFORCE CRM */
+        SET @updateSF = UpdateSingleSalesforceObject(
+            "Contact", @subKey,
+            "Order_SMS__c", @Order_SMS,
+            "Notif_Email__c", @Notif_Email,
+            "Notif_SMS__c", @Notif_SMS,
+            "Prod_Email__c", @Prod_Email,
+            "Prod_SMS__c", @Prod_SMS,
+            "Promo_Email__c", @Promo_Email
+        )
+
+        /* TRIGGER CONFIRMATION EMAIL */
+        SET @ts = CreateObject("TriggeredSend")
+        SET @tsDef = CreateObject("TriggeredSendDefinition")
+        SetObjectProperty(@tsDef, "CustomerKey", @tsExternalKey)
+        SetObjectProperty(@ts, "TriggeredSendDefinition", @tsDef)
+
+        SET @ts_sub = CreateObject("Subscriber")
+        SetObjectProperty(@ts_sub, "SubscriberKey", @subKey)
+        SetObjectProperty(@ts_sub, "EmailAddress", @email)
+        AddObjectArrayItem(@ts, "Subscribers", @ts_sub)
+
+        SET @ts_statusCode = InvokeCreate(@ts, @ts_statusMsg, @errorCode)
+    ENDIF
+ENDIF
+]%% -->
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mes préférences de communication</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8faff; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .success-overlay { background: #d4edda; color: #155724; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; border: 1px solid #c3e6cb;}
+        
+        /* Master Toggle Bar */
+        .master-toggle { background: #ebf5ff; padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px; margin-bottom: 30px; font-weight: bold; font-size: 14px; border: 1px solid #d0e7ff; }
+
+        /* Grid Layout */
+        .pref-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .pref-grid { grid-template-columns: 1fr; } }
+
+        /* Card Styles */
+        .card { background: white; border-radius: 8px; padding: 20px; border: 1px solid #eef2f6; box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
+        .card h2 { font-size: 16px; margin: 0 0 10px 0; }
+        .card p { font-size: 13px; color: #666; margin-bottom: 20px; flex-grow: 1; }
+
+        /* Toggle Component */
+        .toggle-row { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; background: #fff; border: 1px solid #f0f0f0; padding: 10px; border-radius: 6px; position: relative;}
+        .toggle-row.disabled { opacity: 0.7; background: #fafafa; }
+        
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: #c1e9d8; }
+        input:checked + .slider:before { transform: translateX(22px); background-color: #1a5e4e; }
+        
+        .label-text { font-size: 14px; font-weight: 500; }
+        .lock-icon { position: absolute; right: 15px; color: #999; }
+        .submit-btn { background: #1a5e4e; color: white; border: none; padding: 12px 40px; border-radius: 25px; font-size: 16px; cursor: pointer; margin-top: 20px; display: block; width: fit-content; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    %%[ IF @isSubmitted == "true" THEN ]%%
+        <div class="success-overlay">
+            <strong>Succès !</strong> Vos préférences ont été mises à jour. Un email de confirmation vous a été envoyé.
+        </div>
+    %%[ ENDIF ]%%
+
+    <h1>Mes préférences de communication</h1>
+    <p>Gérez les communications que vous souhaitez recevoir de la part de Biogaran, ainsi que les canaux de votre choix (email et/ou SMS).<br>
+    Certaines communications de nature transactionnelles sont obligatoires et nécessaires au bon suivi de votre relation commerciale et vous seront adressées de manière automatique, même en cas désactivation de toutes les communications Biogaran.<br>
+    Vérifiez vos coordonnées email/SMS dans votre espace Mon compte > Mon profil .</p>
+
+    <form method="POST" action="%%=RequestParameter('PAGEURL')=%%" id="prefForm">
+        <input type="hidden" name="submitted" value="true">
+        
+        <!-- BOT PROTECTION: Invisible field -->
+        <div style="display:none;">
+            <input type="text" name="mid_name_field" value="">
+        </div>
+
+        <div class="master-toggle">
+            <label class="switch">
+                <input type="checkbox" id="masterToggle">
+                <span class="slider"></span>
+            </label>
+            <span>J'active ou désactive toutes les communications.</span>
+        </div>
+
+        <div class="pref-grid">
+            <!-- Order Tracking (Locked Email) -->
+            <div class="card">
+                <h2>Informations commandes et livraisons*</h2>
+                <p>Suivi de mes commandes et livraisons.</p>
+                <div class="toggle-row disabled">
+                    <label class="switch"><input type="checkbox" checked disabled><span class="slider"></span></label>
+                    <span class="label-text">Email</span><span class="lock-icon">🔒</span>
+                </div>
+                <div class="toggle-row">
+                    <label class="switch"><input type="checkbox" name="order_sms" class="child-toggle"><span class="slider"></span></label>
+                    <span class="label-text">SMS</span>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="card">
+                <h2>Notifications*</h2>
+                <p>Informations liées à ma relation commerciale.</p>
+                <div class="toggle-row">
+                    <label class="switch"><input type="checkbox" name="notif_email" class="child-toggle"><span class="slider"></span></label>
+                    <span class="label-text">Email</span>
+                </div>
+                <div class="toggle-row">
+                    <label class="switch"><input type="checkbox" name="notif_sms" class="child-toggle"><span class="slider"></span></label>
+                    <span class="label-text">SMS</span>
+                </div>
+            </div>
+
+            <!-- Products -->
+            <div class="card">
+                <h2>Informations produits*</h2>
+                <p>Lancement et disponibilité des produits.</p>
+                <div class="toggle-row">
+                    <label class="switch"><input type="checkbox" name="prod_email" class="child-toggle"><span class="slider"></span></label>
+                    <span class="label-text">Email</span>
+                </div>
+                <div class="toggle-row">
+                    <label class="switch"><input type="checkbox" name="prod_sms" class="child-toggle"><span class="slider"></span></label>
+                    <span class="label-text">SMS</span>
+                </div>
+            </div>
+
+            <!-- Promo -->
+            <div class="card">
+                <h2>Actualités promotionnelles*</h2>
+                <p>Offres de services et invitations.</p>
+                <div class="toggle-row">
+                    <label class="switch"><input type="checkbox" name="promo_email" class="child-toggle"><span class="slider"></span></label>
+                    <span class="label-text">Email</span>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="submit-btn">Enregistrer les modifications</button>
+    </form>
+</div>
+
+<script>
+    const master = document.getElementById('masterToggle');
+    const children = document.querySelectorAll('.child-toggle');
+    master.addEventListener('change', function() {
+        children.forEach(cb => { cb.checked = this.checked; });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<script runat="server">
+Platform.Load("Core", "1");
+// Prevent the page from being framed (Anti-Clickjacking)
+Platform.Response.SetResponseHeader("X-Frame-Options", "Deny");
+// Enable XSS protection in older browsers
+Platform.Response.SetResponseHeader("X-XSS-Protection", "1; mode=block");
+// Prevent browsers from guessing MIME types
+Platform.Response.SetResponseHeader("X-Content-Type-Options", "nosniff");
+// Enforce HTTPS
+Platform.Response.SetResponseHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+// Restrict where resources (JS/CSS) can be loaded from
+Platform.Response.SetResponseHeader("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src fonts.gstatic.com; script-src 'self' 'unsafe-inline' www.google.com www.gstatic.com;");
+</script>
+
+%%[
+    VAR @subscriberKey, @email, @isSubmitted, @errorRedirect
+    SET @errorRedirect = "https://www.biogaran.fr" /* URL to redirect unauthorized users */
+
+    /* 1. REQUIRED PARAMETER CHECK */
+    /* CloudPagesURL() encrypts parameters. We check for their existence. */
+    SET @subscriberKey = AttributeValue("_subscriberKey")
+    SET @email = AttributeValue("emailaddr")
+
+    /* If page accessed directly (no SubKey), redirect to homepage */
+    IF EMPTY(@subscriberKey) THEN
+        Redirect(@errorRedirect)
+    ENDIF
+
+    /* 2. CSRF / BOT PROTECTION (Simple Version) */
+    /* Only process if the POST originates from this specific page */
+    SET @isSubmitted = RequestParameter("submitted")
+    IF @isSubmitted == "true" THEN
+        
+        /* HONEYPOT CHECK: A hidden field bots will fill but humans won't */
+        SET @honeypot = RequestParameter("website_field")
+        IF NOT EMPTY(@honeypot) THEN
+             /* Silent fail for bots - don't process update */
+        ELSE
+            /* ... (Insert your SFDC/SFMC Update Logic Here) ... */
+        ENDIF
+    ENDIF
+]%%
+
+/* In your email footer link: */
+<a href="%%=RedirectTo(CloudPagesURL(12345))=%%">Gérer mes préférences</a>
