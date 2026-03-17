@@ -20,11 +20,11 @@
 SET @subKey = AttributeValue("_subscriberKey")
 SET @email = AttributeValue("emailaddr")
 SET @isSubmitted = RequestParameter("submitted")
-SET @tsExternalKey = "YOUR_CONFIRMATION_EMAIL_EXTERNAL_KEY"
+SET @tsExternalKey = "354058"
 
 /* If no subKey is found (Direct Access), redirect to your website */
 IF EMPTY(@subKey) THEN 
-    Redirect("https://www.biogaran.fr/", true) 
+    RedirectTo("https://www.biogaran.fr/") 
 ENDIF 
 
 /* --- 2. FORM SUBMISSION LOGIC --- */
@@ -44,38 +44,39 @@ IF @isSubmitted == "true" THEN
         SET @Promo_Email = IIF(RequestParameter("promo_email") == "on", "True", "False")
 
         /* UPDATE SFMC DATA EXTENSION */
-        UpsertData("Communication_Preferences", 1, "SubscriberKey", @subKey, 
-            "Order_SMS", @Order_SMS, 
-            "Notif_Email", @Notif_Email, 
-            "Notif_SMS", @Notif_SMS, 
-            "Prod_Email", @Prod_Email, 
-            "Prod_SMS", @Prod_SMS, 
-            "Promo_Email", @Promo_Email
-        )
+        IF Not EMPTY(@subKey) THEN
+            UpsertData("Communication_Preferences", 1, "SubscriberKey", @subKey, 
+                "Order_SMS", @Order_SMS, 
+                "Notif_Email", @Notif_Email, 
+                "Notif_SMS", @Notif_SMS, 
+                "Prod_Email", @Prod_Email, 
+                "Prod_SMS", @Prod_SMS, 
+                "Promo_Email", @Promo_Email,
+                "Email", @email
+            )
+    
+            /* UPDATE SALESFORCE CRM */
+            SET @updateSF = UpdateSingleSalesforceObject(
+                "Contact", @subKey,
+                "Order_SMS__c", @Order_SMS,
+                "Notif_Email__c", @Notif_Email,
+                "Notif_SMS__c", @Notif_SMS,
+                "Prod_Email__c", @Prod_Email,
+                "Prod_SMS__c", @Prod_SMS,
+                "Promo_Email__c", @Promo_Email
+            )
+            /* TRIGGER CONFIRMATION EMAIL */
+            SET @ts = CreateObject("TriggeredSend")
+            SET @tsDef = CreateObject("TriggeredSendDefinition")
+            SetObjectProperty(@tsDef, "CustomerKey", @tsExternalKey)
+            SetObjectProperty(@ts, "TriggeredSendDefinition", @tsDef)
+            SET @ts_sub = CreateObject("Subscriber")
+            SetObjectProperty(@ts_sub, "SubscriberKey", @subKey)
+            SetObjectProperty(@ts_sub, "EmailAddress", @email)
+            AddObjectArrayItem(@ts, "Subscribers", @ts_sub)
 
-        /* UPDATE SALESFORCE CRM */
-        SET @updateSF = UpdateSingleSalesforceObject(
-            "Contact", @subKey,
-            "Order_SMS__c", @Order_SMS,
-            "Notif_Email__c", @Notif_Email,
-            "Notif_SMS__c", @Notif_SMS,
-            "Prod_Email__c", @Prod_Email,
-            "Prod_SMS__c", @Prod_SMS,
-            "Promo_Email__c", @Promo_Email
-        )
-
-        /* TRIGGER CONFIRMATION EMAIL */
-        SET @ts = CreateObject("TriggeredSend")
-        SET @tsDef = CreateObject("TriggeredSendDefinition")
-        SetObjectProperty(@tsDef, "CustomerKey", @tsExternalKey)
-        SetObjectProperty(@ts, "TriggeredSendDefinition", @tsDef)
-
-        SET @ts_sub = CreateObject("Subscriber")
-        SetObjectProperty(@ts_sub, "SubscriberKey", @subKey)
-        SetObjectProperty(@ts_sub, "EmailAddress", @email)
-        AddObjectArrayItem(@ts, "Subscribers", @ts_sub)
-
-        SET @ts_statusCode = InvokeCreate(@ts, @ts_statusMsg, @errorCode)
+            SET @ts_statusCode = InvokeCreate(@ts, @ts_statusMsg, @errorCode)
+        ENDIF
     ENDIF
 ENDIF
 ]%% -->
@@ -87,7 +88,7 @@ ENDIF
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mes préférences de communication</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #c9cacc; color: #333; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f3f4f6; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 900px; margin: 0 auto; }
         .success-overlay { background: #d4edda; color: #155724; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; border: 1px solid #c3e6cb;}
         
@@ -99,7 +100,7 @@ ENDIF
         @media (max-width: 768px) { .pref-grid { grid-template-columns: 1fr; } }
 
         /* Card Styles */
-        .card { background: rgb(115, 115, 115); border-radius: 8px; padding: 20px; border: 1px solid #eef2f6; box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
+        .card { background: rgb(249, 248, 248); border-radius: 8px; padding: 20px; border: 1px solid #eef2f6; box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
         .card h2 { font-size: 16px; margin: 0 0 10px 0; }
         .card p { font-size: 13px; color: #666; margin-bottom: 20px; flex-grow: 1; }
 
@@ -127,12 +128,12 @@ ENDIF
         <div class="success-overlay">
             <strong>Succès !</strong> Vos préférences ont été mises à jour. Un email de confirmation vous a été envoyé.
         </div>
-   <!--%%[ ENDIF ]%%-->
+   <!--%%[ ELSE ]%%-->
 
     <h1>Mes préférences de communication</h1>
     <p>Gérez les communications que vous souhaitez recevoir de la part de Biogaran, ainsi que les canaux de votre choix (email et/ou SMS).<br>
     Certaines communications de nature transactionnelles sont obligatoires et nécessaires au bon suivi de votre relation commerciale et vous seront adressées de manière automatique, même en cas désactivation de toutes les communications Biogaran.<br>
-    Vérifiez vos coordonnées email/SMS dans votre espace <a href="https://www.biogaran.com/mon-compte" target="_blank">Mon compte > Mon profil .</a></p>
+    Vérifiez vos coordonnées email/SMS dans votre espace <a href="https://www.biogaran.fr/" target="_blank" style="text-decoration: none;">Mon compte > Mon profil .</a></p>
 
     <form method="POST" action="%%=RequestParameter('PAGEURL')=%%" id="prefForm">
         <input type="hidden" name="submitted" value="true">
@@ -144,7 +145,7 @@ ENDIF
 
         <div class="master-toggle">
             <label class="switch">
-                <input type="checkbox" id="masterToggle">
+                <input type="checkbox" name="master_consent" id="masterToggle">
                 <span class="slider"></span>
             </label>
             <span>J'active ou désactive toutes les communications.</span>
@@ -206,6 +207,7 @@ ENDIF
 
         <button type="submit" class="submit-btn">Enregistrer les modifications</button>
     </form>
+    <!--%%[ ENDIF ]%%-->
 </div>
 
 <script>
