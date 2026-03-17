@@ -87,7 +87,7 @@ ENDIF
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mes préférences de communication</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8faff; color: #333; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #c9cacc; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 900px; margin: 0 auto; }
         .success-overlay { background: #d4edda; color: #155724; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; border: 1px solid #c3e6cb;}
         
@@ -99,7 +99,7 @@ ENDIF
         @media (max-width: 768px) { .pref-grid { grid-template-columns: 1fr; } }
 
         /* Card Styles */
-        .card { background: white; border-radius: 8px; padding: 20px; border: 1px solid #eef2f6; box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
+        .card { background: rgb(115, 115, 115); border-radius: 8px; padding: 20px; border: 1px solid #eef2f6; box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
         .card h2 { font-size: 16px; margin: 0 0 10px 0; }
         .card p { font-size: 13px; color: #666; margin-bottom: 20px; flex-grow: 1; }
 
@@ -123,16 +123,16 @@ ENDIF
 
 <div class="container">
     
-    %%[ IF @isSubmitted == "true" THEN ]%%
+  <!--%%[ IF @isSubmitted == "true" THEN ]%%-->
         <div class="success-overlay">
             <strong>Succès !</strong> Vos préférences ont été mises à jour. Un email de confirmation vous a été envoyé.
         </div>
-    %%[ ENDIF ]%%
+   <!--%%[ ENDIF ]%%-->
 
     <h1>Mes préférences de communication</h1>
     <p>Gérez les communications que vous souhaitez recevoir de la part de Biogaran, ainsi que les canaux de votre choix (email et/ou SMS).<br>
     Certaines communications de nature transactionnelles sont obligatoires et nécessaires au bon suivi de votre relation commerciale et vous seront adressées de manière automatique, même en cas désactivation de toutes les communications Biogaran.<br>
-    Vérifiez vos coordonnées email/SMS dans votre espace Mon compte > Mon profil .</p>
+    Vérifiez vos coordonnées email/SMS dans votre espace <a href="https://www.biogaran.com/mon-compte" target="_blank">Mon compte > Mon profil .</a></p>
 
     <form method="POST" action="%%=RequestParameter('PAGEURL')=%%" id="prefForm">
         <input type="hidden" name="submitted" value="true">
