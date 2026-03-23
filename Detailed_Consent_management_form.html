@@ -81,6 +81,7 @@ IF @isSubmitted == "true" THEN
 ENDIF
 ]%% -->
 
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -88,9 +89,45 @@ ENDIF
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mes préférences de communication</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f3f4f6; color: #333; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: white; color: #000000; margin: 0; padding: 20px; }
+      .confirmation-box {
+        text-align: center;
+        padding: 40px;
+    }
         .container { max-width: 900px; margin: 0 auto; }
-        .success-overlay { background: #d4edda; color: #155724; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; border: 1px solid #c3e6cb;}
+       .title {
+        font-size: 20px;
+        font-weight: bold;
+        color: #000000;
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+
+    /* Subtitle styling */
+    .subtitle {
+        font-size: 13px;
+        color: #333333;
+        margin-bottom: 25px;
+    }
+
+    /* Pink button styling */
+    .btn-return {
+        background-color: #e6007e; /* Bright pink color matching the image */
+        color: #ffffff;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: normal;
+        cursor: pointer;
+        text-decoration: none; /* In case it's used as an <a> tag */
+        display: inline-block;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn-return:hover {
+        background-color: #cc006f; /* Slightly darker pink on hover */
+    }
         
         /* Master Toggle Bar */
         .master-toggle { background: #ebf5ff; padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px; margin-bottom: 30px; font-weight: bold; font-size: 14px; border: 1px solid #d0e7ff; }
@@ -100,7 +137,7 @@ ENDIF
         @media (max-width: 768px) { .pref-grid { grid-template-columns: 1fr; } }
 
         /* Card Styles */
-        .card { background: rgb(249, 248, 248); border-radius: 8px; padding: 20px; border: 1px solid #eef2f6; box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
+        .card { background:  #F5F7FF; border-radius: 8px; padding: 20px; border: 1px solid #eef2f6; box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
         .card h2 { font-size: 16px; margin: 0 0 10px 0; }
         .card p { font-size: 13px; color: #666; margin-bottom: 20px; flex-grow: 1; }
 
@@ -117,7 +154,23 @@ ENDIF
         
         .label-text { font-size: 14px; font-weight: 500; }
         .lock-icon { position: absolute; right: 15px; color: #999; }
-        .submit-btn { background: #1a5e4e; color: white; border: none; padding: 12px 40px; border-radius: 25px; font-size: 16px; cursor: pointer; margin-top: 20px; display: block; width: fit-content; }
+        .submit-btn { background: #E6007C; color: white; border: none; padding: 12px 40px;  font-size: 16px; cursor: pointer; margin-top: 20px; display: block; width: fit-content; }
+      
+       .bottom-section {
+        display: flex;
+        background:  #F5F7FF;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 50px; 
+    }
+
+    
+    .reference-code {
+        color: #274ca0;
+        font-size: 10px;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
     </style>
 </head>
 <body>
@@ -125,9 +178,12 @@ ENDIF
 <div class="container">
     
   <!--%%[ IF @isSubmitted == "true" THEN ]%%-->
-        <div class="success-overlay">
-            <strong>Succès !</strong> Vos préférences ont été mises à jour. Un email de confirmation vous a été envoyé.
-        </div>
+        <div class="confirmation-box">
+    <h2 class="title">Votre mise à jour a été prise en compte</h2>
+    <p class="subtitle">Vos préférences de communication ont bien été enregistrées</p>
+    <button class="btn-return" onclick="window.location.href='%%=CloudPagesURL(17233)=%%'">Revenir au profil</button>
+</div>
+
    <!--%%[ ELSE ]%%-->
 
     <h1>Mes préférences de communication</h1>
@@ -145,17 +201,17 @@ ENDIF
 
         <div class="master-toggle">
             <label class="switch">
-                <input type="checkbox" name="master_consent" id="masterToggle">
+                <input type="checkbox" id="masterToggle">
                 <span class="slider"></span>
             </label>
-            <span>J'active ou désactive toutes les communications.</span>
+            <span>J'active ou désactive toutes les communications et canaux d'envoi.</span>
         </div>
 
         <div class="pref-grid">
             <!-- Order Tracking (Locked Email) -->
             <div class="card">
                 <h2>Informations commandes et livraisons*</h2>
-                <p>Suivi de mes commandes et livraisons.</p>
+                <p>Je souhaite recevoir par email (obligatoire) et par SMS les informations relatives au suivi de mes commandes, suivi livraisons produits de la part de Biogaran.</p>
                 <div class="toggle-row disabled">
                     <label class="switch"><input type="checkbox" checked disabled><span class="slider"></span></label>
                     <span class="label-text">Email</span><span class="lock-icon">🔒</span>
@@ -169,7 +225,7 @@ ENDIF
             <!-- Notifications -->
             <div class="card">
                 <h2>Notifications*</h2>
-                <p>Informations liées à ma relation commerciale.</p>
+                <p>Je souhaite recevoir par email et/ou par SMS les informations liées à ma relation commerciale avec Biogaran (Rendez-vous avec mon délégué, Suivi de mes réclamations, ...)</p>
                 <div class="toggle-row">
                     <label class="switch"><input type="checkbox" name="notif_email" class="child-toggle"><span class="slider"></span></label>
                     <span class="label-text">Email</span>
@@ -183,7 +239,7 @@ ENDIF
             <!-- Products -->
             <div class="card">
                 <h2>Informations produits*</h2>
-                <p>Lancement et disponibilité des produits.</p>
+                <p>Je souhaite recevoir par email et/ou par SMS les informations produits de la part de Biogaran (lancement, disponibilité et retour rupture, modification de spécialité)</p>
                 <div class="toggle-row">
                     <label class="switch"><input type="checkbox" name="prod_email" class="child-toggle"><span class="slider"></span></label>
                     <span class="label-text">Email</span>
@@ -197,7 +253,7 @@ ENDIF
             <!-- Promo -->
             <div class="card">
                 <h2>Actualités promotionnelles*</h2>
-                <p>Offres de services et invitations.</p>
+                <p>Je souhaite recevoir par email des offres de services et des informations promotionnelles de la part de Biogaran (événements, invitations, services, outils, programmes de formation, actualités divers )</p>
                 <div class="toggle-row">
                     <label class="switch"><input type="checkbox" name="promo_email" class="child-toggle"><span class="slider"></span></label>
                     <span class="label-text">Email</span>
@@ -205,9 +261,15 @@ ENDIF
             </div>
         </div>
 
-        <button type="submit" class="submit-btn">Enregistrer les modifications</button>
+        <button type="submit" class="submit-btn">Enregistrer mes préférences
+</button><br>
+      <span style="font-size: 11px; line-height: 1.5;">*En activant mes préférences, j'accepte de recevoir ces communications de la part de Biogaran, par le canal choisi sur mes coordonnées renseignées dans mon espace Mon compte > Mon profil et reconnais que mes données personnelles sont traitées et utilisées uniquement dans ce cadre.
+      </span>
+      <div class="bottom-section">
+        <div class="reference-code">PO-03799-01/26</div>
+        </div>
     </form>
-    <!--%%[ ENDIF ]%%-->
+  <!--%%[ ENDIF ]%%-->
 </div>
 
 <script>
