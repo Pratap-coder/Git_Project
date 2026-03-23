@@ -112,7 +112,7 @@ ENDIF
 
     /* Pink button styling */
     .btn-return {
-        background-color: #e6007e; /* Bright pink color matching the image */
+        background-color: #e6007e; 
         color: #ffffff;
         border: none;
         padding: 12px 24px;
@@ -120,7 +120,7 @@ ENDIF
         font-size: 13px;
         font-weight: normal;
         cursor: pointer;
-        text-decoration: none; /* In case it's used as an <a> tag */
+        text-decoration: none;
         display: inline-block;
         transition: background-color 0.3s ease;
     }
@@ -171,6 +171,54 @@ ENDIF
         font-weight: 600;
         margin-bottom: 12px;
     }
+
+    /* FIX: Tooltip styling for the info icon */
+    .info-icon-wrapper {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        cursor: help;
+    }
+    .info-icon {
+        height: 20px;
+        width: 20px;
+        margin-left: -5px;
+    }
+    .tooltip-text {
+        visibility: hidden;
+        width: 220px;
+        background-color: black;
+        color: white;
+        text-align: center;
+        border-radius: 6px;
+        padding: 8px;
+        position: absolute;
+        z-index: 10;
+        bottom: 140%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s, visibility 0.3s;
+        font-size: 12px;
+        font-weight: normal;
+        line-height: 1.4;
+        box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+        pointer-events: none;
+    }
+    .tooltip-text::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -6px;
+        border-width: 6px;
+        border-style: solid;
+        border-color: #333333 transparent transparent transparent;
+    }
+    .info-icon-wrapper:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
     </style>
 </head>
 <body>
@@ -212,10 +260,20 @@ ENDIF
             <div class="card">
                 <h2>Informations commandes et livraisons*</h2>
                 <p>Je souhaite recevoir par email (obligatoire) et par SMS les informations relatives au suivi de mes commandes, suivi livraisons produits de la part de Biogaran.</p>
+                
                 <div class="toggle-row disabled">
                     <label class="switch"><input type="checkbox" checked disabled><span class="slider"></span></label>
-                    <span class="label-text">Email</span><span class="lock-icon">🔒</span>
+                    <span class="label-text">Email</span>
+                    
+                    <!-- FIX: Info Icon Wrapper with Tooltip -->
+                    <div class="info-icon-wrapper">
+                        <img src="https://image.lp.biogaran.pro/lib/fe38117175640474701572/m/1/2fe43fa2-649b-4d4d-b39c-f09a5e07d0dc.png" alt="Info" class="info-icon">
+                        <span class="tooltip-text">L’email est obligatoire pour recevoir ce type de communication</span>
+                    </div>
+
+                    <span class="lock-icon">🔒</span>
                 </div>
+
                 <div class="toggle-row">
                     <label class="switch"><input type="checkbox" name="order_sms" class="child-toggle"><span class="slider"></span></label>
                     <span class="label-text">SMS</span>
@@ -261,8 +319,7 @@ ENDIF
             </div>
         </div>
 
-        <button type="submit" class="submit-btn">Enregistrer mes préférences
-</button><br>
+        <button type="submit" class="submit-btn">Enregistrer mes préférences</button><br>
       <span style="font-size: 11px; line-height: 1.5;">*En activant mes préférences, j'accepte de recevoir ces communications de la part de Biogaran, par le canal choisi sur mes coordonnées renseignées dans mon espace Mon compte > Mon profil et reconnais que mes données personnelles sont traitées et utilisées uniquement dans ce cadre.
       </span>
       <div class="bottom-section">
