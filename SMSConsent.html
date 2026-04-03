@@ -1,0 +1,66 @@
+%%[
+SET @uid = GUID()
+SET @keyword = Msg(0).Verb
+SET @date = NOW()
+SET @mobileNum = MOBILE_NUMBER 
+InsertData("Communication_Preferences", "UID",@uid, "Source", "SMS","Optin_SMS_Notifications", 0,"MobilePhone", @mobileNum, "Keyword", @keyword,"Change_Date", @date ) 
+SET @replyMsg = "You have been successfully removed from our promotional alerts. You will no longer receive these messages."
+]%%
+
+%%=v(@replyMsg)=%%
+
+
+<p>%%=v(@incoming_message_verb)=%%</p>
+
+
+
+Vous vous êtes désabonné(e) de tous les SMS de notification de Biogarant. Vous ne recevrez plus aucun message de notification.
+
+
+SELECT
+      smsTracking.MobileMessageTrackingID
+    , smsTracking.EID
+    , smsTracking.MID
+    , smsTracking.Mobile
+    , smsTracking.MessageID
+    , smsTracking.KeywordID
+    , smsTracking.CodeID
+    , smsTracking.ConversationID
+    , smsTracking.CampaignID
+    , smsTracking.Sent
+    , smsTracking.Delivered
+    , smsTracking.Undelivered
+    , smsTracking.Unsub
+    , smsTracking.OptIn
+    , smsTracking.OptOut
+    , smsTracking.Outbound
+    , smsTracking.Inbound
+    , smsTracking.CreateDateTime
+    , smsTracking.ModifiedDateTime
+    , smsTracking.ActionDateTime
+    , smsTracking.MessageText
+    , smsTracking.IsTest
+    , smsTracking.MobileMessageRecurrenceID
+    , smsTracking.ResponseToMobileMessageTrackingID
+    , smsTracking.IsValid
+    , smsTracking.InvalidationCode
+    , smsTracking.SMSJobID
+    , smsTracking.SMSBatchID
+    , smsTracking.SendID
+    , smsTracking.SendSplitID
+    , smsTracking.SendSegmentID
+    , smsTracking.SendJobID
+    , smsTracking.SendGroupID
+    , smsTracking.SendPersonID
+    , smsTracking.SubscriberID
+    , smsTracking.SubscriberKey
+    , smsTracking.SMSStandardStatusCodeId
+    , smsTracking.Description
+    , smsTracking.Name
+    , smsTracking.ShortCode
+    , smsTracking.SharedKeyword
+    , smsTracking.Ordinal
+    , smsTracking.FromName
+    , smsTracking.JBDefinitionID
+    , smsTracking.JBActivityID
+FROM _SMSMessageTracking AS smsTracking

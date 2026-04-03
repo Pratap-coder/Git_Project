@@ -1,40 +1,33 @@
 <script runat="server">
     Platform.Load("Core", "1");
-    // 1. SECURITY HEADERS: Prevents the page from being loaded in an iframe or hacked via browser scripts
-    // Prevent the page from being framed (Anti-Clickjacking)
-    Platform.Response.SetResponseHeader("X-Frame-Options", "Deny");
-    // Enable XSS protection in older browsers
+    /* Platform.Response.SetResponseHeader("X-Frame-Options", "Deny"); */
     Platform.Response.SetResponseHeader("X-XSS-Protection", "1; mode=block");
-    // Prevent browsers from guessing MIME types
     Platform.Response.SetResponseHeader("X-Content-Type-Options", "nosniff");
-    // Enforce HTTPS
     Platform.Response.SetResponseHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-    // Restrict where resources (JS/CSS) can be loaded from
-    Platform.Response.SetResponseHeader("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';");
+    /* FIX: Added img-src to allow the image from Biogaran domain to load properly */
+    Platform.Response.SetResponseHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' https://image.lp.biogaran.pro data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';");
 </script>
 
 <!--
 %%[
-/* --- 1. ACCESS CONTROL --- */
-/* AttributeValue("_subscriberKey") only works if the link was generated using CloudPagesURL() in an email */
 SET @subKey = AttributeValue("_subscriberKey")
 SET @email = AttributeValue("emailaddr")
 SET @isSubmitted = RequestParameter("submitted")
 SET @tsExternalKey = "354058"
 
-/* If no subKey is found (Direct Access), redirect to your website */
+
 IF EMPTY(@subKey) THEN 
-    RedirectTo("https://www.biogaran.fr/") 
+    RedirectTo("https://biogaran.fr/") 
 ENDIF 
 
-/* --- 2. FORM SUBMISSION LOGIC --- */
+
 IF @isSubmitted == "true" THEN
     
-    /* BOT PROTECTION: Honeypot check */
+   
     SET @honeypot = RequestParameter("mid_name_field")
     
     IF EMPTY(@honeypot) THEN
-        /* Capture Form Inputs */
+       
         SET @Order_Email = "True"
         SET @Order_SMS = IIF(RequestParameter("order_sms") == "on", "True", "False")
         SET @Notif_Email = IIF(RequestParameter("notif_email") == "on", "True", "False")
@@ -43,44 +36,35 @@ IF @isSubmitted == "true" THEN
         SET @Prod_SMS = IIF(RequestParameter("prod_sms") == "on", "True", "False")
         SET @Promo_Email = IIF(RequestParameter("promo_email") == "on", "True", "False")
 
-        /* UPDATE SFMC DATA EXTENSION */
-        IF Not EMPTY(@subKey) THEN
-            UpsertData("Communication_Preferences", 1, "SubscriberKey", @subKey, 
-                "Order_SMS", @Order_SMS, 
-                "Notif_Email", @Notif_Email, 
-                "Notif_SMS", @Notif_SMS, 
-                "Prod_Email", @Prod_Email, 
-                "Prod_SMS", @Prod_SMS, 
-                "Promo_Email", @Promo_Email,
-                "Email", @email
-            )
+   IF NOT EMPTY(@subKey) THEN
+        UpsertData("Communication_Preferences", 1, "SubscriberKey", @subKey, 
+            "Order_SMS", @Order_SMS, 
+            "Notif_Email", @Notif_Email, 
+            "Notif_SMS", @Notif_SMS, 
+            "Prod_Email", @Prod_Email, 
+            "Prod_SMS", @Prod_SMS, 
+            "Promo_Email", @Promo_Email,
+            "Email", @email
+        )
     
-            /* UPDATE SALESFORCE CRM */
-            SET @updateSF = UpdateSingleSalesforceObject(
-                "Contact", @subKey,
-                "Order_SMS__c", @Order_SMS,
-                "Notif_Email__c", @Notif_Email,
-                "Notif_SMS__c", @Notif_SMS,
-                "Prod_Email__c", @Prod_Email,
-                "Prod_SMS__c", @Prod_SMS,
-                "Promo_Email__c", @Promo_Email
-            )
-            /* TRIGGER CONFIRMATION EMAIL */
-            SET @ts = CreateObject("TriggeredSend")
-            SET @tsDef = CreateObject("TriggeredSendDefinition")
-            SetObjectProperty(@tsDef, "CustomerKey", @tsExternalKey)
-            SetObjectProperty(@ts, "TriggeredSendDefinition", @tsDef)
-            SET @ts_sub = CreateObject("Subscriber")
-            SetObjectProperty(@ts_sub, "SubscriberKey", @subKey)
-            SetObjectProperty(@ts_sub, "EmailAddress", @email)
-            AddObjectArrayItem(@ts, "Subscribers", @ts_sub)
 
-            SET @ts_statusCode = InvokeCreate(@ts, @ts_statusMsg, @errorCode)
-        ENDIF
+
+     
+        SET @ts = CreateObject("TriggeredSend")
+        SET @tsDef = CreateObject("TriggeredSendDefinition")
+        SetObjectProperty(@tsDef, "CustomerKey", @tsExternalKey)
+        SetObjectProperty(@ts, "TriggeredSendDefinition", @tsDef)
+
+        SET @ts_sub = CreateObject("Subscriber")
+        SetObjectProperty(@ts_sub, "SubscriberKey", @subKey)
+        SetObjectProperty(@ts_sub, "EmailAddress", @email)
+        AddObjectArrayItem(@ts, "Subscribers", @ts_sub)
+
+        SET @ts_statusCode = InvokeCreate(@ts, @ts_statusMsg, @errorCode)
+       ENDIF
     ENDIF
 ENDIF
 ]%% -->
-
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -126,7 +110,7 @@ ENDIF
     }
 
     .btn-return:hover {
-        background-color: #cc006f; /* Slightly darker pink on hover */
+        background-color: #cc006f;
     }
         
         /* Master Toggle Bar */
@@ -156,21 +140,10 @@ ENDIF
         .lock-icon { position: absolute; right: 15px; color: #999; }
         .submit-btn { background: #E6007C; color: white; border: none; padding: 12px 40px;  font-size: 16px; cursor: pointer; margin-top: 20px; display: block; width: fit-content; }
       
-       .bottom-section {
-        display: flex;
-        background:  #F5F7FF;
-        flex-direction: column;
-        align-items: center;
-        padding-top: 50px; 
-    }
+  
 
     
-    .reference-code {
-        color: #274ca0;
-        font-size: 10px;
-        font-weight: 600;
-        margin-bottom: 12px;
-    }
+    
 
     /* FIX: Tooltip styling for the info icon */
     .info-icon-wrapper {
@@ -254,7 +227,10 @@ ENDIF
             </label>
             <span>J'active ou désactive toutes les communications et canaux d'envoi.</span>
         </div>
-
+<div id="unsavedWarning" style="display:none; color:red; margin-bottom:10px;">
+  Vos préférences ont été modifiées mais ne sont pas encore enregistrées.
+  Cliquez sur “Enregistrer mes préférences” pour confirmer vos choix.
+</div>
         <div class="pref-grid">
             <!-- Order Tracking (Locked Email) -->
             <div class="card">
@@ -307,11 +283,11 @@ ENDIF
                     <span class="label-text">SMS</span>
                 </div>
             </div>
-
+ 
             <!-- Promo -->
             <div class="card">
                 <h2>Actualités promotionnelles*</h2>
-                <p>Je souhaite recevoir par email des offres de services et des informations promotionnelles de la part de Biogaran (événements, invitations, services, outils, programmes de formation, actualités divers )</p>
+                <p>Je souhaite recevoir par email des offres de services et des informations promotionnelles de la part de Biogaran (événements, invitations, services, outils, programmes d’accompagnement, actualités divers )</p>
                 <div class="toggle-row">
                     <label class="switch"><input type="checkbox" name="promo_email" class="child-toggle"><span class="slider"></span></label>
                     <span class="label-text">Email</span>
@@ -320,11 +296,10 @@ ENDIF
         </div>
 
         <button type="submit" class="submit-btn">Enregistrer mes préférences</button><br>
+      
       <span style="font-size: 11px; line-height: 1.5;">*En activant mes préférences, j'accepte de recevoir ces communications de la part de Biogaran, par le canal choisi sur mes coordonnées renseignées dans mon espace Mon compte > Mon profil et reconnais que mes données personnelles sont traitées et utilisées uniquement dans ce cadre.
       </span>
-      <div class="bottom-section">
-        <div class="reference-code">PO-03799-01/26</div>
-        </div>
+      
     </form>
   <!--%%[ ENDIF ]%%-->
 </div>
@@ -335,46 +310,22 @@ ENDIF
     master.addEventListener('change', function() {
         children.forEach(cb => { cb.checked = this.checked; });
     });
-
- document.addEventListener("DOMContentLoaded", function() {
-    // 1. Initialize a variable to track if the form has been modified
-    var isFormDirty = false;
-
-    // 2. Select your form. 
-    // If you use Smart Capture, 'form' will automatically select it.
-    // If you have multiple forms, change 'form' to '#yourFormId'
-    const form = document.querySelector('form'); 
-
-    if (form) {
-      // 3. Listen for any input changes inside the form
-      const inputs = form.querySelectorAll('input, select, textarea');
-      inputs.forEach(function(input) {
-        input.addEventListener('input', function() {
-          isFormDirty = true; // Mark form as "dirty" (modified)
-        });
-        
-        // Also listen for change events (useful for checkboxes/dropdowns)
-        input.addEventListener('change', function() {
-          isFormDirty = true;
-        });
-      });
-
-      // 4. If the user successfully clicks submit, remove the warning
-      form.addEventListener('submit', function() {
-        isFormDirty = false; 
-      });
-    }
-
-    // 5. Trigger the popup if the user tries to leave with unsaved changes
-    window.addEventListener('beforeunload', function(event) {
-      if (isFormDirty) {
-        // Cancel the event as stated by the standard.
-        event.preventDefault();
-        // Chrome requires returnValue to be set.
-        event.returnValue = ''; 
-      }
-    });
+  
+ var isDirty = false;
+ 
+  const form = document.getElementById('prefForm');
+  const warning = document.getElementById('unsavedWarning');
+ 
+  form.addEventListener('change', function() {
+    isDirty = true;
+    warning.style.display = 'block';
   });
+ 
+  form.addEventListener('submit', function() {
+    isDirty = false;
+    warning.style.display = 'none';
+  });
+  
 </script>
 </body>
 </html>

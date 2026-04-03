@@ -1,0 +1,11 @@
+<!-- %%[
+    VAR @PageID, @MyConsent, @CloudPageLink
+    SET @PageID = 17415 
+    /* 
+      Possible values for the consent to use "Notification" Or "promotional" Or "informational"
+    */
+    SET @MyConsent = "Notification"
+    SET @CloudPageLink = CloudPagesURL(@PageID, 'consent', @MyConsent)
+]%% -->
+
+<a href="%%=RedirectTo(@CloudPageLink)=%%">cliquer ici pour desabonner</a>
