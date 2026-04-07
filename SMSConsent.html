@@ -1,20 +1,15 @@
-%%[
-SET @uid = GUID()
-SET @keyword = Msg(0).Verb
-SET @date = NOW()
-SET @mobileNum = MOBILE_NUMBER 
-InsertData("Communication_Preferences", "UID",@uid, "Source", "SMS","Optin_SMS_Notifications", 0,"MobilePhone", @mobileNum, "Keyword", @keyword,"Change_Date", @date ) 
-SET @replyMsg = "You have been successfully removed from our promotional alerts. You will no longer receive these messages."
-]%%
 
+%%[
+var @mobileNum , @date, @replyMsg
+SET @mobileNum = MOBILE_NUMBER 
+SET @date = NOW()
+InsertData("Communication_Preferences","ID", @mobileNum, "Source", "SMS","Optin_SMS_Notifications", false,"MobilePhone", @mobileNum ,"Change_Date", @date) 
+SET @replyMsg = "Vous vous êtes désabonné(e) de tous les SMS de notification de Biogarant. Vous ne recevrez plus aucun message de notification."
+]%%
 %%=v(@replyMsg)=%%
 
 
-<p>%%=v(@incoming_message_verb)=%%</p>
 
-
-
-Vous vous êtes désabonné(e) de tous les SMS de notification de Biogarant. Vous ne recevrez plus aucun message de notification.
 
 
 SELECT
@@ -64,3 +59,17 @@ SELECT
     , smsTracking.JBDefinitionID
     , smsTracking.JBActivityID
 FROM _SMSMessageTracking AS smsTracking
+
+
+ UpsertData("Communication_Preferences",2, "ID", @subKey, "Change_Date", @date,
+                "Optin_Email_Transactionnel",True,
+                "Optin_Email_Notifications", @Notif_Email,   
+                "Optin_Email_Promotionnel", @Prod_Email, 
+                "Optin_Email_Actualités_Promotionnelles", @Promo_Email,
+                "Optin_SMS_Transactionnel", @Order_SMS,
+                "Optin_SMS_Notifications", @Notif_SMS,
+                "Optin_SMS_Promotionnel", @Prod_SMS,
+                "Email", @email
+            )
+
+ UpsertData("Communication_Preferences", 2,"ID",@subKey,"Change_Date", @date, "Email", @email,@ConsentToUpdate, 0 )
