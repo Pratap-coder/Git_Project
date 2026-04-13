@@ -1,0 +1,75 @@
+
+%%[
+var @mobileNum , @date, @replyMsg
+SET @mobileNum = MOBILE_NUMBER 
+SET @date = NOW()
+InsertData("Communication_Preferences","ID", @mobileNum, "Source", "SMS","Optin_SMS_Notifications", false,"MobilePhone", @mobileNum ,"Change_Date", @date) 
+SET @replyMsg = "Vous vous êtes désabonné(e) de tous les SMS de notification de Biogarant. Vous ne recevrez plus aucun message de notification."
+]%%
+%%=v(@replyMsg)=%%
+
+
+
+
+
+SELECT
+      smsTracking.MobileMessageTrackingID
+    , smsTracking.EID
+    , smsTracking.MID
+    , smsTracking.Mobile
+    , smsTracking.MessageID
+    , smsTracking.KeywordID
+    , smsTracking.CodeID
+    , smsTracking.ConversationID
+    , smsTracking.CampaignID
+    , smsTracking.Sent
+    , smsTracking.Delivered
+    , smsTracking.Undelivered
+    , smsTracking.Unsub
+    , smsTracking.OptIn
+    , smsTracking.OptOut
+    , smsTracking.Outbound
+    , smsTracking.Inbound
+    , smsTracking.CreateDateTime
+    , smsTracking.ModifiedDateTime
+    , smsTracking.ActionDateTime
+    , smsTracking.MessageText
+    , smsTracking.IsTest
+    , smsTracking.MobileMessageRecurrenceID
+    , smsTracking.ResponseToMobileMessageTrackingID
+    , smsTracking.IsValid
+    , smsTracking.InvalidationCode
+    , smsTracking.SMSJobID
+    , smsTracking.SMSBatchID
+    , smsTracking.SendID
+    , smsTracking.SendSplitID
+    , smsTracking.SendSegmentID
+    , smsTracking.SendJobID
+    , smsTracking.SendGroupID
+    , smsTracking.SendPersonID
+    , smsTracking.SubscriberID
+    , smsTracking.SubscriberKey
+    , smsTracking.SMSStandardStatusCodeId
+    , smsTracking.Description
+    , smsTracking.Name
+    , smsTracking.ShortCode
+    , smsTracking.SharedKeyword
+    , smsTracking.Ordinal
+    , smsTracking.FromName
+    , smsTracking.JBDefinitionID
+    , smsTracking.JBActivityID
+FROM _SMSMessageTracking AS smsTracking
+
+
+ UpsertData("Communication_Preferences",2, "ID", @subKey, "Change_Date", @date,
+                "Optin_Email_Transactionnel",True,
+                "Optin_Email_Notifications", @Notif_Email,   
+                "Optin_Email_Promotionnel", @Prod_Email, 
+                "Optin_Email_Actualités_Promotionnelles", @Promo_Email,
+                "Optin_SMS_Transactionnel", @Order_SMS,
+                "Optin_SMS_Notifications", @Notif_SMS,
+                "Optin_SMS_Promotionnel", @Prod_SMS,
+                "Email", @email
+            )
+
+ UpsertData("Communication_Preferences", 2,"ID",@subKey,"Change_Date", @date, "Email", @email,@ConsentToUpdate, 0 )

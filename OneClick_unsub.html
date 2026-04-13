@@ -1,0 +1,87 @@
+<script runat="server">
+    Platform.Load("Core", "1");
+    Platform.Response.SetResponseHeader("X-Frame-Options", "Deny"); 
+    Platform.Response.SetResponseHeader("X-XSS-Protection", "1; mode=block");
+    Platform.Response.SetResponseHeader("X-Content-Type-Options", "nosniff");
+    Platform.Response.SetResponseHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    Platform.Response.SetResponseHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' https://image.lp.biogaran.pro data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';");
+</script>
+
+<!--
+%%[
+VAR @RetrievedCode, @subKey, @email, @uid , @ConsentToUpdate
+SET @subKey = AttributeValue("_subscriberKey")
+SET @email = AttributeValue("emailaddr")
+SET @RetrievedCode = RequestParameter('consent')
+IF EMPTY(@subKey) THEN 
+    RedirectTo("https://biogaran.fr/") 
+ELSEIF @RetrievedCode == "Notification" THEN
+    SET @ConsentToUpdate = "Optin_Email_Notifications"
+ELSEIF @RetrievedCode == "promotional" THEN
+    SET @ConsentToUpdate = "Optin_Email_Actualités_Promotionnelles"
+ELSEIF @RetrievedCode == "informational" THEN
+    SET @ConsentToUpdate = "Optin_Email_Promotionnel" 
+ENDIF 
+
+IF NOT EMPTY(@subKey) AND NOT EMPTY(@ConsentToUpdate) THEN
+    SET @uid = GUID()
+    insertData("Communication_Preferences", "ID",@subKey, "Email", @email,"uid",@uid,@ConsentToUpdate, 0 )
+            
+            /* 
+               
+            UpdateSingleSalesforceObject(
+                "Contact", @subKey,
+                "Order_SMS__c", @Order_SMS,
+                "Notif_Email__c", @Notif_Email,
+                "Notif_SMS__c", @Notif_SMS,
+                "Prod_Email__c", @Prod_Email,
+                "Prod_SMS__c", @Prod_SMS,
+                "Promo_Email__c", @Promo_Email
+            )
+            */
+ENDIF
+]%%
+-->
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mes préférences de communication</title>
+    <style>
+        /* CSS Reset for safe responsive design */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+body { font-family: 'Segoe UI', Arial, sans-serif; background-color: white; color: #000000; margin: 0; padding: 20px; }
+        .confirmation-box { text-align: center; padding: 40px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        h1 { font-size: 26px; }
+        
+        .title { font-size: 20px; font-weight: bold; color: #000000; margin-top: 0; margin-bottom: 15px; }
+        .subtitle { font-size: 13px; color: #333333; margin-bottom: 25px; }
+
+        .btn-return { background-color: #e6007e; color: #ffffff; border: none; padding: 12px 24px; border-radius: 4px; font-size: 13px; font-weight: normal; cursor: pointer; text-decoration: none; display: inline-block; transition: background-color 0.3s ease; }
+        .btn-return:hover { background-color: #cc006f; }
+        @media (max-width: 768px) { 
+            body { padding: 15px; }
+            h1 { font-size: 22px; }
+            } 
+          
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+ <div class="confirmation-box">
+    <h2 class="title">Votre mise à jour a été prise en compte</h2>
+    <p class="subtitle">Vos préférences de communication ont bien été enregistrées</p>
+    <button class="btn-return" onclick="window.location.href='%%=CloudPagesURL(17233)=%%'">Revenir au profil</button>
+</div>
+</div>
+</body>
+</html>
