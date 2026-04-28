@@ -73,3 +73,47 @@ FROM _SMSMessageTracking AS smsTracking
             )
 
  UpsertData("Communication_Preferences", 2,"ID",@subKey,"Change_Date", @date, "Email", @email,@ConsentToUpdate, 0 )
+
+
+%%[
+    /* 1. Capture inbound data from the SMS */
+    VAR @mobileNumber, @inboundMsg, @contactRows, @contactId, @updateStatus, @replyMsg
+    
+    /* MOBILE_NUMBER gets the sender's phone number */
+    SET @mobileNumber = MOBILE_NUMBER 
+    
+    /* MSG(0) captures the exact text they sent. Useful if you want to save it to SFDC */
+    SET @inboundMsg = uppercase(trim(MSG(0))) 
+
+    /* 2. Look up the Contact ID in Salesforce CRM using the mobile number */
+    /* NOTE: "MobilePhone" must match the exact formatting of @mobileNumber */
+    SET @contactRows = RetrieveSalesforceObjects("Contact", "Id", "MobilePhone", "=", @mobileNumber)
+
+    /* 3. Check if we found exactly one (or more) matching Contacts in SFDC */
+    IF RowCount(@contactRows) > 0 THEN
+        
+        /* Get the 15/18 digit Salesforce ID of the first match */
+        SET @contactId = Field(Row(@contactRows, 1), "Id")
+
+        /* 4. Update the record in Salesforce CRM */
+        /* Replace 'Status__c' and 'Confirmed' with your actual SFDC field API names and values */
+        SET @updateStatus = UpdateSingleSalesforceObject(
+            "Contact", @contactId,
+            "Status__c", "Confirmed",
+            "Last_SMS_Keyword_Used__c", @inboundMsg
+        )
+
+        /* Check if the update was successful */
+        IF @updateStatus == 1 THEN
+            SET @replyMsg = "Thank you! Your profile has been updated."
+        ELSE
+            SET @replyMsg = "We found your profile, but an error occurred updating it."
+        ENDIF
+
+    ELSE
+        /* Fallback if no Contact has this phone number in Salesforce */
+        SET @replyMsg = "Sorry, we couldn't find an account linked to this phone number."
+    ENDIF
+]%%
+/* 5. This outputs the text message sent back to the customer */
+%=v(@replyMsg)=%

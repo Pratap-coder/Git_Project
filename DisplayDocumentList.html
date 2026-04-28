@@ -1,0 +1,88 @@
+<!--%%[
+VAR @alertsString, @alertRowset, @i, @alertRow, @alertCode ,@alertName, @documents, @docRowset, @j, @docItem
+SET @alertsString = AttributeValue("Alerts")
+IF NOT EMPTY(@alertsString) THEN
+    SET @alertRowset = BuildRowsetFromString(@alertsString, ",")
+    FOR @i = 1 TO RowCount(@alertRowset) DO
+        SET @alertRow = Row(@alertRowset, @i)
+        SET @alertCode = Trim(Field(@alertRow, 1))
+        SET @alertName = Lookup("Alerte_Document", "Alert_Name", "Alert_Code", @alertCode)
+        SET @documents = Lookup("Alerte_Document", "Document", "Alert_Code", @alertCode)
+        IF NOT EMPTY(@alertName) THEN
+            ]%%--><div style="font-family:Arial,Helvetica,sans-serif; font-size:14px;color:#6b6b6b;">
+ <h3 style="color: #004080; margin-bottom: 8px; margin-top: 0;">
+  %%=v(@alertName)=%%</h3><!-- %%[
+                IF IndexOf(@documents, "Aucun retour") > 0 THEN
+                ]%%  --><p style="color: #666666; font-style: italic; margin-top: 0;">
+  %%=v(@documents)=%%</p><!-- %%[
+                ELSE
+                    ]%%--><p style="margin-bottom: 5px; margin-top: 0; font-weight: bold;">
+  Documents &agrave; fournir :</p><ul style="margin-top: 0; padding-left: 20px; color: #333333;">
+  <!--%%[
+                    SET @docRowset = BuildRowsetFromString(@documents, "-")
+                    FOR @j = 1 TO RowCount(@docRowset) DO
+                        SET @docItem = Trim(Field(Row(@docRowset, @j), 1))
+                        IF Length(@docItem) > 0 THEN
+                            ]%%--><li style="margin-bottom: 5px;">
+   %%=v(@docItem)=%%</li><!-- %%[
+                        ENDIF
+                    NEXT @j
+                    ]%%--></ul><!-- %%[
+                ENDIF
+                ]%%--></div><!-- %%[
+        ENDIF
+    NEXT @i
+ENDIF
+]%%-->
+
+<!-- 
+%%[
+VAR @docs, @rowset, @rowCount, @i, @row, @value
+VAR @uniqueList
+/* Input string */
+SET @docs = AttributeValue("Documents") /* e.g. "doc1-doc2-doc1-doc3" */
+/* Split into rows */
+SET @rowset = BuildRowsetFromString(@docs, "-")
+SET @rowCount = RowCount(@rowset)
+/* Initialize result */
+SET @uniqueList = ""
+/* Loop through values */
+FOR @i = 1 TO @rowCount DO
+   SET @row = Row(@rowset, @i)
+   SET @value = Trim(Field(@row, 1))
+   /* Check if already exists in result */
+   IF IndexOf(Concat(";", @uniqueList, ";"), Concat(";", @value, ";")) == 0 THEN
+       /* Add to result */
+       IF Empty(@uniqueList) THEN
+           SET @uniqueList = @value
+       ELSE
+           SET @uniqueList = Concat(@uniqueList, ";", @value)
+       ENDIF
+   ENDIF
+NEXT @i
+]%% 
+-->
+%%=v(@uniqueList)=%%
+
+<!--
+%%[
+    var @documents ,@rows, @rowCount, @i, @item, @uniqueTracker, @finalOutput
+    Set @documents = LookupRows("SIREN_Alerts_Uni_Documents","SIREN",SIREN)
+    set @rows = BuildRowsetFromString(@documents, "-")
+    set @rowCount = RowCount(@rows)
+    set @uniqueTracker = "|" 
+    set @finalOutput = ""
+    for @i = 1 to @rowCount do
+        set @item = Field(Row(@rows, @i), 1)
+        set @item = Trim(@item) 
+        if not empty(@item) then
+            var @checkItem
+            set @checkItem = concat("|", @item, "|")
+            if IndexOf(@uniqueTracker, @checkItem) == 0 then
+                set @uniqueTracker = Concat(@uniqueTracker, @item, "|")
+                set @finalOutput = Concat(@finalOutput, "- ", @item, "<br>")   
+            endif 
+        endif 
+    next @i
+]%% -->
+%%=v(@finalOutput)=%%

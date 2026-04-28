@@ -1,0 +1,48 @@
+
+Based on the PDF you provided, this is a comprehensive KYC (Know Your Customer) compliance process. Your company (AFS) receives data from Altares/Intuiz about changes in the companies you do business with (your partners).
+
+Your goal is to use Salesforce Marketing Cloud (SFMC) to process this data, figure out if you need to take action, email the partners asking for the required documents (the Pièces Justificatives or PJ), and track their responses.
+
+Here is a detailed, plain-English breakdown of exactly what the document is asking you to do in SFMC, broken down into 4 main phases:
+
+Phase 1: Data Filtering & Processing (Automation Studio / SQL)
+When the raw file enters SFMC, you cannot just email everyone. SFMC needs to analyze the file and separate actionable "Alerts" from non-actionable "Information".
+1. The "Alerte" vs "Information" Split:
+Most changes (Address, Capital, Name, etc.) are automatically Alerts. However, SFMC needs SQL logic to check for two exceptions:
+Score de Défaillance (Failure Score): It is an Alerte ONLY IF the new score is less than 10, OR if the score is between 10-19 AND has dropped by more than 10 points. Otherwise, it is just Information.
+Procédures Collectives: If the status contains "Plan de redressement" or "Arrêt du plan de redressement", it is Information. Everything else is an Alerte.
+2. Deduplication & Cleanup:
+SFMC must remove duplicate records.
+SFMC must remove records where the "Old Value" and "New Value" are the exact same (e.g., changing from SAS to SASU and back to SAS in error).
+3. The SIREN Multi-Account Rule:
+One SIREN (company ID) might have multiple Adhérent (Member) accounts. SFMC needs to look up the SIREN and duplicate the alert for all active member accounts associated with that SIREN.
+
+
+Phase 2: The Email Campaign & Routing (Journey Builder & AMPscript)
+This is where the AMPscript we built earlier comes in! However, the PDF outlines strict legal rules for who receives the email.
+1. Dynamic Content:
+If a company has 3 different alerts, they should receive one single email listing all 3 alerts and their respective documents (The AMPscript I provided in the previous step handles this perfectly).
+2. Email Routing (Crucial Step!):
+You cannot just send the email to the default contact. You must split your audience based on the type of alert:
+If the alert is a "Changement de Dirigeant" (Change of Director):
+DO NOT send it to the Director.
+Send To: Admin Email 1 (if blank, use Admin Email 2).
+CC: The Commercial rep and the Regional Director (RR).
+For ALL OTHER Alerts:
+Send To: Director Email (if blank, use Admin 1, if blank use Admin 2).
+CC: The Commercial rep and the Regional Director (RR).
+
+
+Phase 3: Generating SFMC Output Files (Data Extracts)
+The PDF states that after SFMC processes this data, it must generate several files (usually via Data Extract Activities in Automation Studio) and send them back to the SRP team or other systems:
+Info File: A list of the events marked as "Information" for the commercial team.
+Alert File by Zone: A list of actual alerts grouped by commercial zone.
+Tracking File: A master spreadsheet of all alerts with blank columns added for "Comments", "Treated", and "Blocked" so the human team can track progress.
+Intuiz/Macro Files: System files to update your external databases.
+
+Phase 4: The Reminder Journey (Relances)
+You need to build a Journey to handle companies that ignore the first email.
+Day 1: Send Initial Email.
+Week 4: If no response (the SRP team will upload a file of people who haven't responded), send a Reminder Email.
+Week 8: If still no response, trigger an action to Block their RIB (bank details).
+Exception: Changes of activity with "Activités des sièges sociaux" are closed automatically after 1 month without a reminder.
