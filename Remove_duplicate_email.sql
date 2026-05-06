@@ -1,0 +1,45 @@
+SELECT 
+    SIREN,
+    Adherent,
+    Raison_Sociale,
+    Date_Reception,
+    Prenom_Gerant,
+    Nom_Gerant,
+    Telephone,
+    Raison_commerciale,
+    Commercial,
+    Nom_Commercial,
+    ATC_TELEPHONE,
+    ATC_Email,
+    RR,
+    RR_Email,
+    Email,
+    Zone
+FROM (
+    SELECT 
+        SIREN,
+        Adherent,
+        Alerte_Code,
+        Raison_Sociale,
+        Type_Evenement,
+        Nouvelle_Valeur_Retenue,
+        Precedente_Valeur_Retenue,
+        Evenement,
+        Source,
+        Date_Reception,
+        Prenom_Gerant,
+        Nom_Gerant,
+        Telephone,
+        Raison_commerciale,
+        Commercial,
+        Nom_Commercial,
+        ATC_TELEPHONE,
+        ATC_Email,
+        RR,
+        RR_Email,
+        Email,
+        Zone,
+        ROW_NUMBER() OVER (PARTITION BY SIREN, Email ORDER BY Date_Reception DESC) AS rn
+    FROM Update_Adherent
+) sub
+WHERE rn = 1

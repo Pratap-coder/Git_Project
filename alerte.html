@@ -1,0 +1,75 @@
+%%[
+/* 1. Retrieve the alerts for the subscriber from the sendable Data Extension */
+/* Make sure "Alerts" matches the name of your column holding the comma-separated codes */
+VAR @alertsString, @alertRowset, @i, @alertRow, @alertCode
+VAR @alertName, @documents, @docRowset, @j, @docItem
+
+SET @alertsString = AttributeValue("Alerts")
+
+/* 2. Check if the subscriber has any alerts */
+IF NOT EMPTY(@alertsString) THEN
+    
+    /* Split the comma-separated alerts string into individual codes */
+    SET @alertRowset = BuildRowsetFromString(@alertsString, ",")
+    
+    /* 3. Loop through each alert code */
+    FOR @i = 1 TO RowCount(@alertRowset) DO
+        SET @alertRow = Row(@alertRowset, @i)
+        SET @alertCode = Trim(Field(@alertRow, 1))
+        
+        /* 4. Look up Name and Documents from your Catalog DE */
+        /* Make sure "Alert_Document_Catalog" matches your DE name exactly */
+        SET @alertName = Lookup("Alert_Document_Catalog", "Alert_Name", "Alert_Code", @alertCode)
+        SET @documents = Lookup("Alert_Document_Catalog", "Documents_Required", "Alert_Code", @alertCode)
+        
+        /* If the alert exists in the DE, display it */
+        IF NOT EMPTY(@alertName) THEN
+            ]%%
+            
+            <!-- HTML Output for the Alert Title -->
+            <div style="margin-bottom: 25px; font-family: Arial, sans-serif;">
+                <h3 style="color: #004080; margin-bottom: 8px; margin-top: 0;">%%=v(@alertName)=%%</h3>
+                
+                %%[
+                /* 5. Decide how to display the documents */
+                IF IndexOf(@documents, "Aucun retour") > 0 THEN
+                    /* Handle the scenario where no documents are needed */
+                    ]%%
+                    <p style="color: #666666; font-style: italic; margin-top: 0;">%%=v(@documents)=%%</p>
+                    %%[
+                ELSE
+                    /* Handle the scenario where there are documents to list */
+                    ]%%
+                    <p style="margin-bottom: 5px; margin-top: 0; font-weight: bold;">Documents à fournir :</p>
+                    <ul style="margin-top: 0; padding-left: 20px; color: #333333;">
+                    
+                    %%[
+                    /* Split the documents text block wherever there is a hyphen "-" */
+                    SET @docRowset = BuildRowsetFromString(@documents, "-")
+                    
+                    /* Loop through the split document items */
+                    FOR @j = 1 TO RowCount(@docRowset) DO
+                        
+                        /* Extract the text and use Trim() to remove extra spaces or line breaks */
+                        SET @docItem = Trim(Field(Row(@docRowset, @j), 1))
+                        
+                        /* Because the text starts with a "-", the first split item is often blank. 
+                           This IF statement ensures we only display actual text. */
+                        IF Length(@docItem) > 0 THEN
+                            ]%%
+                            <li style="margin-bottom: 5px;">%%=v(@docItem)=%%</li>
+                            %%[
+                        ENDIF
+                    NEXT @j
+                    ]%%
+                    
+                    </ul>
+                    %%[
+                ENDIF
+                ]%%
+            </div>
+            %%[
+        ENDIF
+    NEXT @i
+ENDIF
+]%%
