@@ -21,7 +21,7 @@
         btn.disabled = true;
         
         // Optional: Change the button text to give the user visual feedback
-        btn.innerHTML = "Processing..."; 
+        btn.innerHTML = "en cours de traitement..."; 
         
         // Add a slight CSS style change (optional)
         btn.style.opacity = "0.6";
