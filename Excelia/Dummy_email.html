@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Email Title</title>
+    <style>
+        /* Basic reset and responsive styles */
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4; }
+        table { border-spacing: 0; border-collapse: collapse; }
+        .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; width: 100%; }
+        .header { padding: 20px; text-align: center; background-color: #0044cc; color: #ffffff; }
+        .body-content { padding: 30px 20px; color: #333333; line-height: 1.6; font-size: 16px; }
+        .footer { padding: 20px; text-align: center; background-color: #eeeeee; color: #777777; font-size: 12px; }
+        .footer a { color: #0044cc; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <table class="email-container" role="presentation">
+        <!-- Header -->
+        <tr>
+            <td class="header">
+                <h2>Your Company Name</h2>
+            </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+            <td class="body-content">
+                <p>Hello %%=v(@FirstName)=%%,</p>
+                <p>This is a dummy email template. You can replace this section with your newsletter content, promotional offers, or transactional information.</p>
+                <p>Thanks,<br>The Team</p>
+            </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+            <td class="footer">
+                <p>Inetum Inc. | 123 Business Rd, Saint Quent, 94300</p>
+                <p>
+                    <!-- AMPScript for CloudPage Preference Center -->
+                    <a href="%%=CloudPagesURL(3151)=%%" target="_blank">Manage Preferences</a> 
+                    
+                    &nbsp;|&nbsp; 
+                    
+                    <!-- Standard Unsubscribe for compliance -->
+                    <a href="%%profile_center_url%%" target="_blank">Unsubscribe</a>
+                </p>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

@@ -1,0 +1,170 @@
+<title>Centre de préférences</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<style>
+    body { background-color: #F7F7F7; font-family: 'Roboto', sans-serif; margin: 0; padding: 0; min-height: 100vh; display: flex; flex-direction: column; }
+    .navbar { background-color: #fff; padding: 20px 0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); display: flex; justify-content: center; align-items: center; position: relative; }
+    .navbar::after { content: ''; display: block; width: 100%; height: 2px; background-color: rgba(0, 0, 0, 0.1); position: absolute; bottom: 0; left: 0; }
+    .header__logo a { display: block; }
+    .header__image { max-height: 50px; }
+    h1 { color: #003366; font-size: 2.5em; margin-bottom: 20px; text-align: center; }
+    p { font-size: 18px; color: #333; margin-bottom: 40px; text-align: center; }
+    .preferences-form { display: flex; flex-direction: column; align-items: center; }
+    .preferences-form label { font-size: 16px; color: #333; display: flex; align-items: center; }
+    .preferences-form input[type="checkbox"] { margin-right: 10px; }
+    .preferences-form button { background-color: #003A70; color: #fff; padding: 8px 16px; border: none; cursor: pointer; margin-top: 20px; border-radius: 4px; width: 100%; max-width: 400px; }
+    .preferences-form button:hover { background-color: #0754bf; }
+    .container { width: 100%; max-width: 1200px; padding: 40px; background-color: #fff; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); text-align: center; margin: 40px auto; border-radius: 8px; }
+    #confirmation { width: 100%; background-color: #28a745; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; display: none; z-index: 1000; font-weight: bold;}
+</style>
+
+<div id="confirmation">Votre formulaire a été soumis avec succès!</div>
+
+<header>
+    <nav class="navbar navbar-expand-lg">
+        <div class="header__logo">
+            <a href="https://www.excelia-group.fr" title="Accueil" rel="home">
+                <img class="header__image" src="https://image.crm.excelia-group.com/lib/fe2d11737364047a7d1673/m/1/2be31ce0-53c9-4feb-a840-870801422eab.png" alt="Excelia">
+            </a>
+        </div>
+    </nav>
+</header>
+
+<!-- 
+%%[
+
+SET @subscriberKey = AttributeValue('_subscriberKey') 
+SET @emailAddress = AttributeValue('emailaddr')
+SET @submitted = RequestParameter("submitted")
+
+IF NOT EMPTY(@subscriberKey) THEN
+    SET @crmRows = RetrieveSalesforceObjects("Contact", "MobilePhone, Optin_MarketingEmail__c, Optin_SMS__c, Optin_Whatsapp__c , Optin_Appel__c , Optin_Pixel__c", "Id", "=", @subscriberKey)
+    
+    IF RowCount(@crmRows) > 0 THEN
+        SET @crmRow = Row(@crmRows, 1)
+        SET @mobileNumber = Field(@crmRow, "MobilePhone")
+        SET @EmailMarketingConsentOld = Field(@crmRow, "Optin_MarketingEmail__c")
+        SET @SMSMarketingConsentOld = Field(@crmRow, "Optin_SMS__c")
+        SET @WhatsappMarketingConsentOld = Field(@crmRow, "Optin_Whatsapp__c")
+        SET @AppelMarketingConsentOld = Field(@crmRow, "Optin_Appel__c")
+        SET @PixelMarketingConsentOld = Field(@crmRow, "Optin_Pixel__c")
+    ELSE
+        /* Valeur par défaut si non trouvé */
+        SET @EmailMarketingConsentOld = "true"
+        SET @SMSMarketingConsentOld = "true"
+        SET @WhatsappMarketingConsentOld = "true"
+        SET @AppelMarketingConsentOld = "true"
+        SET @PixelMarketingConsentOld = "true"
+    ENDIF
+
+    IF @submitted == "true" THEN
+        SET @EmailMarketingConsent = Iif(RequestParameter("EmailMarketingConsent") == "on", "true", "false")
+        SET @SMSMarketingConsent = Iif(RequestParameter("SMSMarketingConsent") == "on", "true", "false")
+        SET @WhatsappMarketingConsent = Iif(RequestParameter("WhatsappMarketingConsent") == "on", "true", "false")
+        SET @AppelMarketingConsent = Iif(RequestParameter("AppelMarketingConsent") == "on", "true", "false")
+        SET @PixelMarketingConsent = Iif(RequestParameter("PixelMarketingConsent") == "on", "true", "false")
+        SET @HasOptedOutOfEmail = Iif(@EmailMarketingConsent == "true", "false", "true")
+
+        /* SINGLE CALL TO UPDATE CRM (Much faster and saves API limits) */
+        SET @updateRecord = UpdateSingleSalesforceObject("Contact", @subscriberKey,
+            "Optin_MarketingEmail__c", @EmailMarketingConsent,
+            "HasOptedOutOfEmail", @HasOptedOutOfEmail,
+            "Optin_SMS__c", @SMSMarketingConsent,
+            "Optin_Whatsapp__c", @WhatsappMarketingConsent,
+            "Optin_Appel__c", @AppelMarketingConsent,
+            "Optin_Pixel__c", @PixelMarketingConsent
+        )
+
+        /* UPDATE ALL SUBSCRIBERS (Only if Email Consent Changed) */
+        IF @EmailMarketingConsent != @EmailMarketingConsentOld THEN
+            SET @StatusValue = Iif(@EmailMarketingConsent == "true", "Active", "Unsubscribed")
+            
+            SET @Subscriber = CreateObject("Subscriber")
+            SetObjectProperty(@Subscriber, "SubscriberKey", @subscriberKey)
+            SetObjectProperty(@Subscriber, "EmailAddress", @emailAddress)
+            SetObjectProperty(@Subscriber, "Status", @StatusValue)
+            
+            SET @Status = InvokeUpdate(@Subscriber, @createErrDesc, @createErrNo, @createOpts)
+        ENDIF
+        
+        /* Update local variables for rendering the form correctly below */
+        SET @EmailMarketingConsentOld = @EmailMarketingConsent
+        SET @SMSMarketingConsentOld = @SMSMarketingConsent
+        SET @WhatsappMarketingConsentOld = @WhatsappMarketingConsent
+        SET @AppelMarketingConsentOld = @AppelMarketingConsent
+        SET @PixelMarketingConsentOld = @PixelMarketingConsent
+    ENDIF
+
+    /* 3. PREPARE CHECKBOX STATES FOR HTML */
+    SET @EmailChecked = Iif(@EmailMarketingConsentOld == "true", "checked", "")
+    SET @SMSChecked = Iif(@SMSMarketingConsentOld == "true", "checked", "")
+    SET @WhatsappChecked = Iif(@WhatsappMarketingConsentOld == "true", "checked", "")
+    SET @AppelChecked = Iif(@AppelMarketingConsentOld == "true", "checked", "")
+    SET @PixelChecked = Iif(@PixelMarketingConsentOld == "true", "checked", "")
+
+ENDIF
+]%% -->
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-12">
+            <div class="shadow-sm">
+                <div class="card-body">
+                    <h1>Mise à jour des préférences de communication</h1>
+                    <p>Vous pouvez choisir vos préférences de communications Excelia que vous souhaitez recevoir, liées à l'adresse : <span class="text-secondary">%%=v(@emailAddress)=%%</span></p>
+                    
+                <!--    %%[ IF NOT EMPTY(@subscriberKey) THEN ]%% -->
+                    <form class="preferences-form" action="%%=RedirectTo(CloudPagesURL(1874))=%%" method="POST">
+                        <input type="hidden" name="submitted" value="true">
+                        <table align="center">
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <div class="form-group">
+                                        <label><input type="checkbox" name="EmailMarketingConsent" %%=v(@EmailChecked)=%%> Recevoir des Emails</label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <div class="form-group">
+                                        <label><input type="checkbox" name="SMSMarketingConsent" %%=v(@SMSChecked)=%%> Recevoir des SMS</label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <div class="form-group">
+                                        <label><input type="checkbox" name="WhatsappMarketingConsent" %%=v(@WhatsappChecked)=%%> Recevoir des messages WhatsApp</label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <div class="form-group">
+                                        <label><input type="checkbox" name="AppelMarketingConsent" %%=v(@AppelChecked)=%%> Je souhaite recevoir des appels</label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <div class="form-group">
+                                        <label><input type="checkbox" name="PixelMarketingConsent" %%=v(@PixelChecked)=%%> Je suis d'accord pour que les ouvertures de mes emails reçus soient enregistrées afin de personnaliser mon parcours</label>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                        <button type="submit">Mettre à jour les préférences</button>
+                    </form>
+                 <!--   %%[ ELSE ]%% -->
+                        <p style="color:red;">Erreur: Utilisateur introuvable. Veuillez cliquer sur le lien depuis votre email.</p>
+                 <!--   %%[ ENDIF ]%% -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<footer></footer>
