@@ -1,0 +1,241 @@
+<script runat="server">
+Platform.Load("Core","1.1.1");
+try{
+</script>
+%%[
+var @subscriberKey, @emailAddress
+var @newsletter, @marketingEmail, @eventInvitation, @hasOptedOutEmail, @updateRecord
+
+set @subscriberKey = AttributeValue("_subscriberkey")
+set @emailAddress = AttributeValue("emailaddr")
+set @hasOptedOutEmail = "false"
+
+
+set @whatsapp = QueryParameter("Whatsapp")
+set @marketing = QueryParameter("Marketing")
+set @sms = QueryParameter("SMS")
+SET @mobileNumber = QueryParameter("MobileNumber")
+
+
+set @subscriberRows = RetrieveSalesforceObjects(
+   "Contact",
+   "Id,Optin_SMS__c,Optin_MarketingEmail__c,Optin_Whatsapp__c,HasOptedOutOfEmail",
+   "Id", "=", @subscriberKey
+   )
+ELSE
+ENDIF
+
+IF RowCount(@subscriberRows) > 0 THEN
+
+    IF @whatsapp == 'on' THEN
+     set @optinWhatsapp = 'true'
+    ELSE
+     set @optinWhatsapp = 'false'
+    ENDIF
+
+    IF @marketing == 'on' THEN
+     set @optinMarketing = 'true'
+    ELSE
+     set @optinMarketing = 'false'
+    ENDIF
+
+    IF @sms == 'on' THEN
+      set @optinSms = 'true'
+      IF NOT EMPTY(@mobileNumber) THEN
+
+        /* 1. Récupérer l'OptOut dans _SMSSubscriptionLog */
+        SET @rows = LookupRows("_SMSSubscriptionLog", "MobileNumber", @mobileNumber, "OptOutStatusID", 1)
+
+        IF RowCount(@rows) > 0 THEN
+            SET @row = Row(@rows, 1)
+            @optinSms = 'false'
+        ENDIF
+        ]%%
+<script>
+  // Création du corps de la requête d'authentification
+  var payload = {
+      "grant_type": "client_credentials",
+      "client_id": "k4dq3n1zvauq8v2c4x4lz5tr",
+      "client_secret": "qWCrhjYWKQOIxJtUrMwY3G9j"
+  };
+ 
+  var url = "https://mcbsrzt7n96hl-f2h14jssf7z1c4.auth.marketingcloudapis.com/v2/token";
+  var payloadString = Stringify(payload);
+
+  var headerNames = ["Content-Type"];
+  var headerValues = ["application/json"];
+// Envoi de la requête HTTP POST
+var result = HTTP.Post(url, contentType, payloadString, headerNames, headerValues);
+
+// Gestion du résultat d'authentification
+if (result.StatusCode == 200) {
+    var response = Platform.Function.ParseJSON(result.Response[0]);
+    var accessToken = response.access_token;
+    var headers = ["Authorization", "Content-Type"];
+    var headerValues = ["Bearer " + accessToken, "application/json"];
+  
+    // 2. Récupérer les "KeyWord" auquels le num de tél du contact est associés
+    var getSubsUrl = "https://mcbsrzt7n96hl-f2h14jssf7z1c4.rest.marketingcloudapis.com/sms/v1/contacts/subscriptions";
+    var subPayload = {
+          "mobileNumber": mobileNumber
+    }
+    var subResult = HTTP.Post(getSubsUrl, "application/json", Stringify(subPayload), headers, headerValues);
+        
+    if (subResult.StatusCode == 200) {
+      var subsResponse = Platform.Function.ParseJSON(subResult.Response[0]);
+      var subscriptions = subsResponse.contacts;
+      for (var i = 0; i < subscriptions.length; i++) {
+        var shortCode = subscriptions[i].shortCode;
+        var keyword = subscriptions[i].keyword;
+
+        // 3. Simulation STOP avec /queueMO
+        var stopUrl = "https://mcbsrzt7n96hl-f2h14jssf7z1c4.rest.marketingcloudapis.com/sms/v1/queueMO";
+        var stopPayload = {
+          "mobileNumbers": [mobileNumber],
+          "shortCode": shortCode,
+          "messageText": "STOP"
+        };
+        var stopResult = HTTP.Post(stopUrl, "application/json", Stringify(stopPayload), headers, headerValues);
+      }
+    }
+  }
+</script>
+        %%[
+      ELSE
+       OutputLine("No mobile number found for the subscriber.")
+      ENDIF
+     ELSE
+      set @optinSms = 'false'
+    ENDIF 
+
+ IF @optinMarketing == 'false' THEN
+
+    /* Désabonner l'abonné dans AllSubscribers */
+    set @sub = CreateObject("Subscriber")
+    SetObjectProperty(@sub, "EmailAddress", @emailAddress)
+    SetObjectProperty(@sub, "SubscriberKey", @subscriberKey)
+    SetObjectProperty(@sub, "Status", "Unsubscribed")
+
+    set @updateOptions = CreateObject("UpdateOptions")
+    set @saveOptions = CreateObject("SaveOption")
+    SetObjectProperty(@saveOptions,"SaveAction","UpdateAdd")
+    SetObjectProperty(@saveOptions,"PropertyName","*")
+    AddObjectArrayItem(@updateOptions,"SaveOptions", @saveOptions)
+
+    set @updateStatusCode = InvokeUpdate(@sub, @updateStatusMessage, @updateErrorCode, @updateOptions)
+    set @hasOptedOutEmail = "true"
+ ENDIF
+ SET @updateRecord = UpdateSingleSalesforceObject(
+   "Contact", @subscriberKey,
+   "Optin_SMS__c", @optinSms ,
+   "Optin_Whatsapp__c", @optinWhatsapp ,
+   "Optin_MarketingEmail__c", @optinMarketing,
+   "HasOptedOutOfEmail", @hasOptedOutEmail
+ )
+ENDIF
+]%%
+
+<script runat="server">
+}catch(e){
+ Write(Stringify(e));
+}
+</script>
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="ROBOTS" content="INDEX,FOLLOW">
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <title>Excelia</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        body {
+            background-color: #F7F7F7;
+        }
+
+        .btn-primary {
+            color: #fff;
+            background-color: #077BBF;
+            border-color: #077BBF;
+        }
+
+        .btn-primary:hover {
+            color: #fff;
+            background-color: #0754bf;
+            border-color: #0729bf;
+        }
+
+        .btn-primary:focus,
+        .btn-primary.focus {
+            color: #fff;
+            background-color: #0754bf;
+            border-color: #0729bf;
+            box-shadow: 0 0 0 0.2rem rgba(183, 50, 127, 0.5);
+        }
+
+        .btn-primary.disabled,
+        .btn-primary:disabled {
+            color: #fff;
+            background-color: #0754bf;
+            border-color: #0729bf;
+        }
+
+        .btn-primary:not(:disabled):not(.disabled):active,
+        .btn-primary:not(:disabled):not(.disabled).active,
+        .show>.btn-primary.dropdown-toggle {
+            color: #fff;
+            background-color: #630039;
+            border-color: #520030;
+        }
+
+        .btn-primary:not(:disabled):not(.disabled):active:focus,
+        .btn-primary:not(:disabled):not(.disabled).active:focus,
+        .show>.btn-primary.dropdown-toggle:focus {
+            box-shadow: 0 0 0 0.2rem rgba(183, 50, 127, 0.5);
+        }
+
+        .logo {
+            width: 200px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container mt-3">
+
+        <div class="d-flex justify-content-center mb-3">
+            <a href="https://www.excelia-group.fr" target="_blank">
+                <img class="logo" src="https://upload.wikimedia.org/wikipedia/fr/4/4a/EXCELIA_LOGO.png"
+                    alt="Logo Excelia Bleu">
+            </a>
+        </div>
+
+
+        <div class="d-flex mb-3 align-items-center card shadow-sm">
+            <div class="card-body">
+                <h3>
+                    Merci
+                </h3>
+                <p>
+                    Vos préférences de communications e-mails Excelia pour l'adresse <span
+                        class="text-secondary">%%=v(@emailAddress)=%%</span> ont bien été mises à jour. TEL : %%=v(@mobileNumber)=%%
+                </p>
+
+
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>
