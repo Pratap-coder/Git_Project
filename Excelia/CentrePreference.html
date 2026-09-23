@@ -1,0 +1,154 @@
+%%[
+var @subscriberKey, @emailAddress, @jobId, @batchId, @listId, @whatsappCheckBox
+
+set @subscriberKey = AttributeValue("_subscriberkey")
+set @emailAddress = AttributeValue("emailaddr")
+set @jobId = AttributeValue("jobid")
+set @batchId = AttributeValue("_JobSubscriberBatchID")
+set @listId = AttributeValue("listid")
+
+set @subscriberRows = RetrieveSalesforceObjects(
+   "Contact",
+   "Id,Optin_SMS__c,Optin_MarketingEmail__c,Optin_Whatsapp__c,HasOptedOutOfEmail",
+   "Id", "=", @subscriberKey
+   )
+
+
+   
+  IF RowCount(@subscriberRows) > 0 THEN
+
+    SET @row = row(@subscriberRows,1)
+    SET @SMS = field(@row,"Optin_SMS__c")
+    SET @Whatsapp = field(@row,"Optin_Whatsapp__c")
+    SET @Marketing = field(@row,"Optin_MarketingEmail__c")
+    SET @HasOptedOutOfEmail = field(@row,"HasOptedOutOfEmail")
+    
+    IF @Whatsapp == true THEN SET @whatsappCheckBox = "checked" ENDIF
+    IF @SMS == true THEN SET @SmsCheckBox = "checked" ENDIF
+    IF @Marketing == true THEN SET @MarketingCheckBox = "checked" ENDIF
+  
+  ENDIF
+
+]%%
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="ROBOTS" content="INDEX,FOLLOW">
+    <meta name="keywords" content="">
+    <meta name="description" content="">
+    <title>Excelia</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        body {
+            background-color: #F7F7F7;
+        }
+
+        .btn-primary {
+            color: #fff;
+            background-color: #077BBF;
+            border-color: #077BBF;
+        }
+
+        .btn-primary:hover {
+            color: #fff;
+            background-color: #0754bf;
+            border-color: #0729bf;
+        }
+
+        .btn-primary:focus,
+        .btn-primary.focus {
+            color: #fff;
+            background-color: #0754bf;
+            border-color: #0729bf;
+            box-shadow: 0 0 0 0.2rem rgba(183, 50, 127, 0.5);
+        }
+
+        .btn-primary.disabled,
+        .btn-primary:disabled {
+            color: #fff;
+            background-color: #0754bf;
+            border-color: #0729bf;
+        }
+
+        .btn-primary:not(:disabled):not(.disabled):active,
+        .btn-primary:not(:disabled):not(.disabled).active,
+        .show>.btn-primary.dropdown-toggle {
+            color: #fff;
+            background-color: #630039;
+            border-color: #520030;
+        }
+
+        .btn-primary:not(:disabled):not(.disabled):active:focus,
+        .btn-primary:not(:disabled):not(.disabled).active:focus,
+        .show>.btn-primary.dropdown-toggle:focus {
+            box-shadow: 0 0 0 0.2rem rgba(183, 50, 127, 0.5);
+        }
+
+        .logo {
+            width: 200px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container mt-3">
+
+        <div class="d-flex justify-content-center mb-3">
+            <a href="https://www.excelia.fr/" target="_blank">
+                <img class="logo" src="https://upload.wikimedia.org/wikipedia/fr/4/4a/EXCELIA_LOGO.png"
+                    alt="Logo Excelia">
+            </a>
+        </div>
+
+
+        <div class="d-flex mb-3 align-items-center card shadow-sm">
+            <div class="card-body">
+                <h3>
+                    Mise à jour des préférences de communication
+                </h3>
+                <p>
+                    Vous pouvez choisir vos préférences de communications Excelia que vous souhaitez recevoir, liées à l'adresse : <span
+                        class="text-secondary">%%=v(@emailAddress)=%%</span>
+                </p>
+
+                <div class="mx-auto" style="width: 50%; min-width: 300px;">
+                    <form class="justify-content-center" action="%%=RedirectTo(CloudPagesURL(1061))=%%" method="post">
+                      <input type="hidden" name="MobileNumber" value="0606060606">
+                        <div class="custom-control custom-checkbox py-2">
+                            <input type="checkbox" id="sms" name="sms" class="custom-control-input" %%=v(@SmsCheckBox)=%%>
+                            <label class="custom-control-label" for="sms">Je souhaite recevoir des SMS</label>
+                        </div>
+                        <div class="custom-control custom-checkbox py-2">
+                            <input type="checkbox" id="marketing" name="marketing" class="custom-control-input" %%=v(@MarketingCheckBox)=%%>
+                            <label class="custom-control-label" for="marketing">Je souhaite recevoir les e-mails marketing Excelia</label>
+                        </div>
+                        <div class="custom-control custom-checkbox py-2">
+                            <input type="checkbox" id="whatsapp" name="whatsapp" class="custom-control-input" %%=v(@whatsappCheckBox)=%%>
+                            <label class="custom-control-label" for="whatsapp">Je souhaite recevoir des communications Whatsapp</label>
+                        </div>
+                        <div class="text-center py-2">
+                            <button type="submit" class="btn btn-primary mb-2" style="width: 300px;">Mettre à jour</button>
+                        </div>
+                        
+                    </form>
+                    
+                </div>
+
+                <hr>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>
