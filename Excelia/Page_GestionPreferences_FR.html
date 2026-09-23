@@ -1,0 +1,343 @@
+<title>Centre de préférences</title>
+    <link rel="stylesheet" href="">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    
+    
+    
+    <style>
+        body {
+            background-color: #F7F7F7;
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar {
+            background-color: #fff;
+            padding: 20px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .navbar::after {
+            content: '';
+            display: block;
+            width: 100%;
+            height: 2px;
+            background-color: rgba(0, 0, 0, 0.1);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+        }
+        .header__logo a {
+            display: block;
+        }
+        .header__image {
+            max-height: 50px;
+        }
+        h1 {
+            color: #003366;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        p {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .preferences-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .preferences-form label {
+            font-size: 16px;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+        .preferences-form input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .preferences-form button {
+            background-color: #003A70;
+            color: #fff;
+            padding: 8px 16px;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .preferences-form button:hover {
+            background-color: #0754bf;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px; /* Augmenter la largeur de 50% */
+            padding: 40px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin: 40px auto;
+            border-radius: 8px;
+        }
+
+
+    </style>
+
+
+  
+    
+<div id="confirmation" style="
+    width: 100%;
+    background-color: green;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: none;
+    z-index: 1000;">
+    Votre formulaire a été soumis avec succès!
+</div>
+
+
+
+
+    <!-- Navbar -->
+    <header>
+        <nav class="navbar navbar-expand-lg">
+            <div class="header__logo">
+                <a href="https://www.excelia-group.fr" title="Accueil" rel="home">
+                    <img class="header__image" src="https://image.crm.excelia-group.com/lib/fe2d11737364047a7d1673/m/1/2be31ce0-53c9-4feb-a840-870801422eab.png" alt="Excelia">
+                </a>
+            </div>
+        </nav>
+    </header>
+
+%%[
+set @subscriberKey = AttributeValue('_subscriberKey') 
+set @emailAddress = AttributeValue('emailaddr')
+
+set @mobileNumberCrmRow = RetrieveSalesforceObjects("Contact", "MobilePhone", "Id", "=", @subscriberKey)
+IF RowCount(@mobileNumberCrmRow) > 0 THEN
+          SET @mobileNumber = Field(Row(@mobileNumberCrmRow, 1), "MobilePhone")
+ENDIF
+
+set @now = dateAdd(now(),8,"H") 
+set @now = Format(@now,"yyyy-MM-ddTHH:mm:ss")
+set @submitted = RequestParameter("submitted")
+
+
+IF RequestParameter("submitted") == "true" THEN
+
+    SET @EmailMarketingConsentcheckbox = RequestParameter("EmailMarketingConsent")
+    SET @SMSMarketingConsentcheckbox = RequestParameter("SMSMarketingConsent")
+    SET @WhatsappMarketingConsentcheckbox = RequestParameter("WhatsappMarketingConsent")
+        
+        IF @EmailMarketingConsentcheckbox == "on" THEN
+            SET @EmailMarketingConsent = "true"
+        ELSE then 
+             SET @EmailMarketingConsent = "false"
+        ENDIF
+        
+        
+        IF @SMSMarketingConsentcheckbox == "on" THEN
+            SET @SMSMarketingConsent = "true"
+        ELSE then 
+             SET @SMSMarketingConsent = "false"
+        ENDIF
+        
+        
+        IF @WhatsappMarketingConsentcheckbox == "on" THEN
+            SET @WhatsappMarketingConsent = "true"
+        ELSE then 
+             SET @WhatsappMarketingConsent = "false"
+        ENDIF
+        
+        SET @crmRow = RetrieveSalesforceObjects("Contact", "Optin_MarketingEmail__c, Optin_SMS__c, Optin_Whatsapp__c", "Id", "=", @subscriberKey)
+        IF RowCount(@crmRow) > 0 THEN
+          SET @EmailMarketingConsentOld = Field(Row(@crmRow, 1), "Optin_MarketingEmail__c")
+          SET @SMSMarketingConsentOld = Field(Row(@crmRow, 1), "Optin_SMS__c")
+          SET @WhatsappMarketingConsentOld = Field(Row(@crmRow, 1), "Optin_Whatsapp__c")
+        ELSE
+          SET @EmailMarketingConsentOld = "true" /* Valeur par défaut si non trouvé */
+          SET @SMSMarketingConsentOld = "true" /* Valeur par défaut si non trouvé */
+          SET @WhatsappMarketingConsentOld = "true" /* Valeur par défaut si non trouvé */
+        ENDIF      
+        
+
+
+        IF @EmailMarketingConsentOld == "true" and @EmailMarketingConsent == "false" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_MarketingEmail__c", @EmailMarketingConsent)  
+            
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "HasOptedOutOfEmail", "true")
+            
+            set @Subscriber = CreateObject("Subscriber")
+                 SetObjectProperty(@Subscriber, "SubscriberKey",@subscriberKey)
+                 SetObjectProperty(@Subscriber, "EmailAddress",@emailAddress)
+                 SetObjectProperty(@Subscriber, "Status", "unsubscribed")
+            set @Status = InvokeUpdate( @Subscriber, @createErrDesc, @createErrNo, @createOpts)
+            
+         ENDIF       
+
+
+        IF @EmailMarketingConsentOld == "false" and @EmailMarketingConsent == "true" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_MarketingEmail__c", @EmailMarketingConsent)
+                
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "HasOptedOutOfEmail", "false")
+              
+            
+            set @Subscriber = CreateObject("Subscriber")
+                 SetObjectProperty(@Subscriber, "SubscriberKey",@subscriberKey)
+                 SetObjectProperty(@Subscriber, "EmailAddress",@emailAddress)
+                 SetObjectProperty(@Subscriber, "Status", "active")
+            set @Status = InvokeUpdate( @Subscriber, @createErrDesc, @createErrNo, @createOpts)
+   
+         ENDIF
+         
+
+         
+         IF @SMSMarketingConsentOld == "true" and @SMSMarketingConsent == "false" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_SMS__c", @SMSMarketingConsent)  
+         ENDIF       
+         
+
+
+        IF @SMSMarketingConsentOld == "false" and @SMSMarketingConsent == "true" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_SMS__c", @SMSMarketingConsent)  
+         ENDIF
+         
+         /* MAJ Whatsapp Unsubscribe Date */
+         
+         IF @WhatsappMarketingConsentOld == "true" and @WhatsappMarketingConsent == "false" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_Whatsapp__c", @WhatsappMarketingConsent)  
+
+
+            
+         ENDIF       
+         
+         /* MAJ Whatsapp Consent Date */
+
+        IF @WhatsappMarketingConsentOld == "false" and @WhatsappMarketingConsent == "true" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_Whatsapp__c", @WhatsappMarketingConsent)  
+
+
+         ENDIF
+
+ ENDIF
+   
+
+    SET @contactRows = RetrieveSalesforceObjects("Contact", 
+    "Optin_MarketingEmail__c, Optin_SMS__c, Optin_Whatsapp__c", 
+    "Id", "=", @subscriberKey)
+        
+    IF RowCount(@contactRows) == 1 then /* there should only be one row */
+           var @contactRow
+           set @contactRow = Row(@contactRows, 1)
+           
+           set @EmailMarketingConsent = Field(@contactRow, "Optin_MarketingEmail__c")
+           set @SMSMarketingConsent = Field(@contactRow, "Optin_SMS__c")
+           set @WhatsappMarketingConsent = Field(@contactRow, "Optin_Whatsapp__c")
+           
+           IF @EmailMarketingConsent == "true" THEN
+            SET @EmailMarketingConsentchecked = "checked"
+           ELSE 
+            SET @EmailMarketingConsentchecked = "unchecked"
+           ENDIF
+           
+           IF @SMSMarketingConsent == "true" THEN
+            SET @SMSMarketingConsentchecked = "checked"
+           ELSE 
+            SET @SMSMarketingConsentchecked = "unchecked"
+           ENDIF
+           
+           IF @WhatsappMarketingConsent == "true" THEN
+            SET @WhatsappMarketingConsentchecked = "checked"
+           ELSE
+            SET @WhatsappMarketingConsentchecked = "unchecked"
+           ENDIF
+    ENDIF
+    
+
+
+]%%
+    <!-- Main Content -->
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-12">
+                <div class="shadow-sm">
+                    <div class="card-body">
+                        <h1>Mise à jour des préférences de communication</h1>
+                        <p>Vous pouvez choisir vos préférences de communications Excelia que vous souhaitez recevoir, liées à l'adresse : <span class="text-secondary">%%=v(@emailAddress)=%%</span></p>
+                        <form class="preferences-form" action="%%=RedirectTo(CloudPagesURL(1874))=%%&amp;submitted=true" method="POST">
+                            <table align="center">
+                                <tr>
+                                    <td></td>
+                                    <td>
+                                        <div class="form-group">
+                                            <label><input type="checkbox" name="EmailMarketingConsent" %%=v(@EmailMarketingConsentchecked)=%%> Recevoir des Emails</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>
+                                        <div class="form-group">
+                                            <label><input type="checkbox" name="SMSMarketingConsent" %%=v(@SMSMarketingConsentchecked)=%%> Recevoir des SMS</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>
+                                        <div class="form-group">
+                                            <label><input type="checkbox" name="WhatsappMarketingConsent" %%=v(@WhatsappMarketingConsentchecked)=%%> Recevoir des messages WhatsApp</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                            <button type="submit">Mettre à jour les préférences</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+     
+    </footer>
+

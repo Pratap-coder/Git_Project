@@ -1,0 +1,12 @@
+Step-by-Step Details of what was changed:
+Deleted the AMPScript Content Block lookup: You no longer need Platform.Function.ContentBlockByID("2340") because you are now getting the token dynamically from an external endpoint instead of generating it locally using Key Management.
+Added Step 1 (Token Retrieval): At the top of the script, I added an HTTP.Post call pointing to your authentication API.
+Parse & Store Token: It takes the JSON response (e.g. {"access_token": "eyJhbG..."}), extracts it using Platform.Function.ParseJSON(), and stores it into a variable called accessToken.
+Failsafe logic (if (isAuthSuccess)): I wrapped the entire segment logic inside an if statement. Now, if the token request fails (wrong credentials or the endpoint is down), the script skips the whole segment process and logs an error. It will not attempt to send segments if it doesn't have a valid token.
+Applied Token to Headers: In the lower half, I updated var token = "Bearer " + accessToken; so the XML payload passes the newly fetched token dynamically.
+Fixed the Fragile Variable Bug: I fixed the r.INO_CampagneId bug I mentioned in my previous answer by securely mapping it at the start of the row loop (inoCampagneId = r.INO_CampagneId).
+How to configure this in the future:
+Look at Line 13 to Line 15. You will need to insert the specific details your external IT team gives you for the Auth Endpoint:
+authUrl: The link where you request the token.
+authContentType: Change to 'application/json' if the API expects a JSON payload instead of URL encoded data.
+authPayload: Provide the new keys. E.g., if it's JSON, write '{ "client_id": "YOUR_ID", "client_secret": "YOUR_SECRET" }'.
