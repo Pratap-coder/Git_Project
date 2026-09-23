@@ -1,0 +1,127 @@
+Part 1: The AMPScript Content Block (Generating the Security Token)
+Before diving into the main script, let's look at the Content Block (ID: 2340).
+code
+Ampscript
+%%[ 
+SET @JSON = '{ "company": "arkeaFS", "kid": "rFU3V24gIEj6ZN4I6kOEbklcN5U5GTGA" }' 
+SET @JWT = GetJWTByKeyName("94f7b438-66b4-47b7-a869-bcbc9df00b23", "RS512", @JSON) 
+]%%
+%%=v(@JWT)=%%
+What it does:
+It creates a JSON string containing company details and a Key ID (kid).
+It uses the GetJWTByKeyName() function to generate a secure JWT (JSON Web Token).
+The ID "94f7b438-66b4-47b7-a869-bcbc9df00b23" is the External Key of a cryptographic key stored in your SFMC Setup > Key Management. It uses the "RS512" algorithm to sign the token.
+Finally, it outputs the generated token as text.
+Part 2: The Main SSJS Script
+Step 1: Initialization & Logging
+code
+JavaScript
+Platform.Load("Core", "1.1.5");
+var logDE = 'UAT_log_SSJS_toINO';
+var log = DataExtension.Init(logDE);
+log.Rows.Add({ "date_log": Platform.Function.SystemDateToLocalDate(Now()), "Message": "Script Segments_to_INO starting..." });
+Logic: It loads the core SSJS library, connects to a Data Extension named UAT_log_SSJS_toINO (using its Name/External Key), and inserts a "Starting" message with the current date/time.
+Step 2: Defining Target Data Extensions
+code
+JavaScript
+var segmentsDEKey = '7457F7EB-CA96-4006-ABCD-8C14BBFC6BA4';
+var deSegments = DataExtension.Init(segmentsDEKey);
+var RefDEKey = 'A9234E65-9141-479C-9D0B-46ABAB5C4439';
+var deRef = DataExtension.Init(RefDEKey);
+Logic: It initializes two Data Extensions using their External Keys:
+deSegments: The DE containing the actual contacts/prospects to be sent.
+deRef: A reference DE containing your active Campaign IDs.
+Step 3: Getting Unique Campaign IDs
+code
+JavaScript
+var allRef = deRef.Rows.Retrieve();
+var campagneSet = {};
+for (var i = 0; i < allRef.length; i++) {
+    var camp = allRef[i].CampagneId;
+    campagneSet[camp] = true;
+}
+Logic: It fetches all rows from the Reference DE. It then loops through them and stores the CampagneId in a JavaScript object (campagneSet). This acts as a deduplicator, ensuring it has a unique list of campaigns to process.
+Step 4: Preparing API Credentials & JWT
+code
+JavaScript
+var apikey = 'rFU3V24gIEj6ZN4I6kOEbklcN5U5GTGA';
+var kid = 'rFU3V24gIEj6ZN4I6kOEbklcN5U5GTGA';
+var ampscriptBlock = Platform.Function.ContentBlockByID("2340");
+var jwt = Platform.Function.TreatAsContent(ampscriptBlock);
+Logic: It sets the API Key and KID variables. Then, it pulls in Content Block 2340 (the AMPScript block we reviewed in Part 1) and executes it using TreatAsContent(). The resulting JWT string is stored in the jwt variable.
+Step 5: The Main Loop & Filtering (Batching limit)
+code
+JavaScript
+for (var campagneId in campagneSet) {
+    var hasMore = true;
+	while (hasMore) {
+        var filtre = { Property: "CampagneId", SimpleOperator: "equals", Value: campagneId };
+		var filtre2 = { Property: "Flag_Envoye_INO", SimpleOperator: "equals", Value: "False" };
+        var filtreCombi = { LeftOperand: filtre, LogicalOperator: "AND", RightOperand: filtre2 };
+        var rows = deSegments.Rows.Retrieve(filtreCombi);
+Logic: The script loops through each unique Campaign ID.
+Inside, it uses a while (hasMore) loop. Why? Because Rows.Retrieve() in SFMC only pulls a maximum of 2,500 rows at a time.
+It filters the Segments DE to find rows where CampagneId equals the current campaign AND Flag_Envoye_INO is "False".
+Step 6: Generating the XML Payload
+code
+JavaScript
+var xmlBody = '<?xml version="1.0" encoding="UTF-8"?><contacts>';
+var clientsToUpdate = [];
+for (var j = 0; j < rows.length; j++) {
+    var r = rows[j];
+    // ... builds the <contact> XML using r.numero_tiers, r.numero_telephone, etc.
+    clientsToUpdate.push(r.numero_tiers);
+}
+xmlBody += '</contacts>';
+Logic: If it finds contacts, it starts building an XML string. It loops through the retrieved rows, mapping DE fields to XML tags (<customerId>, <companyId>, etc.).
+It also saves the numero_tiers (Customer ID) into an array called clientsToUpdate so it knows exactly who to update later.
+Step 7: Sending the HTTP POST Request
+code
+JavaScript
+var url = 'https://api-financo.rec.arkea.com/ino/voicecampaigns/' + r.INO_CampagneId +'/targets';
+var contentType = 'application/xml';
+var headers = ["x-apikey", "kid", "authorization"];
+var token = "Bearer " + jwt;
+var values = [apikey, kid, token];
+var response = HTTP.Post(url, contentType, xmlBody, headers, values);
+Logic: It constructs the target URL (notice it uses .rec. indicating a UAT/Testing environment).
+It packages the headers and values (including the JWT token).
+It executes the HTTP.Post call to send the XML to the external server.
+Step 8: Handling the Response & Updating SFMC
+code
+JavaScript
+if (response.StatusCode == 201) {
+    // ... logs success
+    for (var k = 0; k < clientsToUpdate.length; k++) {
+        deSegments.Rows.Update(
+            { Flag_Envoye_INO: "True", Date_Envoi_INO: Platform.Function.Now() },
+            ["numero_tiers", "CampagneId"],
+            [clientsToUpdate[k], campagneId]
+        );
+    }
+}
+// ... Error handling & Pagination check
+if (rows.length >= 2500) { hasMore = true; } else { hasMore = false; }
+Logic: If the external server replies with 201 (Created/Success), the script loops through the clientsToUpdate array.
+It updates the Segments DE, changing Flag_Envoye_INO to "True" and stamping the date.
+Finally, if the initial retrieve hit the 2,500 limit, hasMore stays true, and the while loop runs again for the next batch of 2,500 for that campaign.
+🛠️ Cheat Sheet: Where to make future modifications
+If you are moving this from UAT to Production, or need to update keys, here is exactly what you need to change:
+Change the Data Extensions (External Keys):
+Change 7457F7EB-CA96-4006-ABCD-8C14BBFC6BA4 to your Production Segments DE External Key.
+Change A9234E65-9141-479C-9D0B-46ABAB5C4439 to your Production Reference DE External Key.
+Change UAT_log_SSJS_toINO to your Production Log DE Name.
+Change the API URL (UAT to PROD):
+Change https://api-financo.rec.arkea.com/... to the production URL (likely removing the .rec part).
+Change the API Keys:
+Update apikey and kid in the SSJS script (currently rFU3V24gIEj6ZN4I...).
+Update the kid in the AMPScript block JSON payload.
+Change the Cryptographic Key (JWT):
+If production uses a different SSL/Crypto key in SFMC Key Management, update the UUID (94f7b438-66b4-47b7-a869-bcbc9df00b23) inside the AMPScript Block to the new External Key.
+Content Block ID:
+If you recreate the AMPScript block in a different Business Unit or folder, its ID will change. Update ContentBlockByID("2340") to the new ID.
+⚠️ Pro-Tip / Minor Bug Warning in the code:
+On this line:
+var url = 'https://api-financo.rec.arkea.com/ino/voicecampaigns/' + r.INO_CampagneId +'/targets';
+The variable r is created inside the XML generation loop (var r = rows[j];). By the time the code reaches the URL generation, the loop has finished, meaning r holds the data of the very last row in that 2,500 row batch.
+This works perfectly fine as long as every row in that batch has the exact same INO_CampagneId. Since you are pre-filtering by CampagneId, this is likely true, but it is considered a fragile coding practice. If it ever fails, change it to rows[0].INO_CampagneId to grab it from the first row of the batch instead.
