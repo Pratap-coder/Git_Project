@@ -31,7 +31,6 @@
 
 <!-- 
 %%[
-
 SET @subscriberKey = AttributeValue('_subscriberKey') 
 SET @emailAddress = AttributeValue('emailaddr')
 SET @submitted = RequestParameter("submitted")
@@ -64,7 +63,6 @@ IF NOT EMPTY(@subscriberKey) THEN
         SET @PixelMarketingConsent = Iif(RequestParameter("PixelMarketingConsent") == "on", "true", "false")
         SET @HasOptedOutOfEmail = Iif(@EmailMarketingConsent == "true", "false", "true")
 
-        /* SINGLE CALL TO UPDATE CRM (Much faster and saves API limits) */
         SET @updateRecord = UpdateSingleSalesforceObject("Contact", @subscriberKey,
             "Optin_MarketingEmail__c", @EmailMarketingConsent,
             "HasOptedOutOfEmail", @HasOptedOutOfEmail,
@@ -74,19 +72,33 @@ IF NOT EMPTY(@subscriberKey) THEN
             "Optin_Pixel__c", @PixelMarketingConsent
         )
 
-        /* UPDATE ALL SUBSCRIBERS (Only if Email Consent Changed) */
         IF @EmailMarketingConsent != @EmailMarketingConsentOld THEN
             SET @StatusValue = Iif(@EmailMarketingConsent == "true", "Active", "Unsubscribed")
             
-            SET @Subscriber = CreateObject("Subscriber")
-            SetObjectProperty(@Subscriber, "SubscriberKey", @subscriberKey)
-            SetObjectProperty(@Subscriber, "EmailAddress", @emailAddress)
-            SetObjectProperty(@Subscriber, "Status", @StatusValue)
+            SET @Subscriber1 = CreateObject("Subscriber")
+            SetObjectProperty(@Subscriber1, "SubscriberKey", @subscriberKey)
+            SetObjectProperty(@Subscriber1, "EmailAddress", @emailAddress)
+            SetObjectProperty(@Subscriber1, "Status", @StatusValue)
             
-            SET @Status = InvokeUpdate(@Subscriber, @createErrDesc, @createErrNo, @createOpts)
+            SET @Status = InvokeUpdate(@Subscriber1, @createErrDesc, @createErrNo)
         ENDIF
         
-        /* Update local variables for rendering the form correctly below */
+        IF @PixelMarketingConsent != @PixelMarketingConsentOld THEN
+            SET @DontValue = Iif(@PixelMarketingConsent == "true", "False", "True")
+            
+            /* Used @Subscriber2 instead of @Subscriber to avoid overlapping properties */
+            SET @Subscriber2 = CreateObject("Subscriber")
+            SetObjectProperty(@Subscriber2, "SubscriberKey", @subscriberKey)
+            SetObjectProperty(@Subscriber2, "EmailAddress", @emailAddress)
+
+            SET @attr = CreateObject("Attribute")
+            SetObjectProperty(@attr, "Name", "DoNotTrack")
+            SetObjectProperty(@attr, "Value", @DontValue) 
+            AddObjectArrayItem(@Subscriber2, "Attributes", @attr)
+            
+            SET @updateStatus = InvokeUpdate(@Subscriber2, @statusMsg, @errorCode)
+        ENDIF
+        
         SET @EmailMarketingConsentOld = @EmailMarketingConsent
         SET @SMSMarketingConsentOld = @SMSMarketingConsent
         SET @WhatsappMarketingConsentOld = @WhatsappMarketingConsent
@@ -94,7 +106,6 @@ IF NOT EMPTY(@subscriberKey) THEN
         SET @PixelMarketingConsentOld = @PixelMarketingConsent
     ENDIF
 
-    /* 3. PREPARE CHECKBOX STATES FOR HTML */
     SET @EmailChecked = Iif(@EmailMarketingConsentOld == "true", "checked", "")
     SET @SMSChecked = Iif(@SMSMarketingConsentOld == "true", "checked", "")
     SET @WhatsappChecked = Iif(@WhatsappMarketingConsentOld == "true", "checked", "")
@@ -102,7 +113,8 @@ IF NOT EMPTY(@subscriberKey) THEN
     SET @PixelChecked = Iif(@PixelMarketingConsentOld == "true", "checked", "")
 
 ENDIF
-]%% -->
+]%% 
+-->
 
 <div class="container">
     <div class="row justify-content-center">
@@ -112,15 +124,16 @@ ENDIF
                     <h1>Mise à jour des préférences de communication</h1>
                     <p>Vous pouvez choisir vos préférences de communications Excelia que vous souhaitez recevoir, liées à l'adresse : <span class="text-secondary">%%=v(@emailAddress)=%%</span></p>
                     
-                <!--    %%[ IF NOT EMPTY(@subscriberKey) THEN ]%% -->
-                    <form class="preferences-form" action="%%=RedirectTo(CloudPagesURL(1874))=%%" method="POST">
+                  <!--  %%[ IF NOT EMPTY(@subscriberKey) THEN ]%% -->
+                    <!-- Cleaned up the form syntax. Must strictly be method="POST" -->
+                    <form class="preferences-form" action="%%=RedirectTo(CloudPagesURL(3151))=%%" method="POST">
                         <input type="hidden" name="submitted" value="true">
                         <table align="center">
                             <tr>
                                 <td></td>
                                 <td>
                                     <div class="form-group">
-                                        <label><input type="checkbox" name="EmailMarketingConsent" %%=v(@EmailChecked)=%%> Recevoir des Emails</label>
+                                        <label><input type="checkbox" name="EmailMarketingConsent" %%=v(@EmailChecked)=%%> Je souhaite Recevoir des Emails</label>
                                     </div>
                                 </td>
                             </tr>
@@ -128,7 +141,7 @@ ENDIF
                                 <td></td>
                                 <td>
                                     <div class="form-group">
-                                        <label><input type="checkbox" name="SMSMarketingConsent" %%=v(@SMSChecked)=%%> Recevoir des SMS</label>
+                                        <label><input type="checkbox" name="SMSMarketingConsent" %%=v(@SMSChecked)=%%> Je souhaite Recevoir des SMS</label>
                                     </div>
                                 </td>
                             </tr>
@@ -136,7 +149,7 @@ ENDIF
                                 <td></td>
                                 <td>
                                     <div class="form-group">
-                                        <label><input type="checkbox" name="WhatsappMarketingConsent" %%=v(@WhatsappChecked)=%%> Recevoir des messages WhatsApp</label>
+                                        <label><input type="checkbox" name="WhatsappMarketingConsent" %%=v(@WhatsappChecked)=%%> Je souhaite Recevoir des messages WhatsApp</label>
                                     </div>
                                 </td>
                             </tr>
@@ -159,9 +172,9 @@ ENDIF
                         </table>
                         <button type="submit">Mettre à jour les préférences</button>
                     </form>
-                 <!--   %%[ ELSE ]%% -->
+                <!--    %%[ ELSE ]%% -->
                         <p style="color:red;">Erreur: Utilisateur introuvable. Veuillez cliquer sur le lien depuis votre email.</p>
-                 <!--   %%[ ENDIF ]%% -->
+                <!--    %%[ ENDIF ]%% -->
                 </div>
             </div>
         </div>

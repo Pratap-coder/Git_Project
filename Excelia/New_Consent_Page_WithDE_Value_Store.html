@@ -7,7 +7,7 @@
 </head>
 <body>
 
-<!-- %%=ContentBlockById("323217")=%% -->
+%%=ContentBlockById("323217")=%%
 
 <script runat="server">
 Platform.Load("Core","1.1.1");
@@ -18,16 +18,14 @@ try {
   var mobileNumber = Variable.GetValue("@mobileNumber");
   var subscriberKey = Variable.GetValue("@subscriberKey");
   
-  /* --- NEW: RETRIEVE CREDENTIALS FROM DATA EXTENSION --- */
-  // Change these variables if your Data Extension or Column names are different
+  
   var deName = "API_Credentials"; 
   var lookupColumn = "SystemName";
-  var lookupValue = "MobileConnect"; // The value in the row you want to retrieve
+  var lookupValue = "MobileConnect"; 
   
   var credentialRows = Platform.Function.LookupRows(deName, lookupColumn, lookupValue);
   
   if (credentialRows && credentialRows.length > 0) {
-      // Build the setup object using the values from the Data Extension
       var setup = {
           authBaseURI: credentialRows[0]["AuthBaseURI"],
           restBaseURI: credentialRows[0]["RestBaseURI"],
@@ -35,7 +33,6 @@ try {
           clientSecret: credentialRows[0]["ClientSecret"]
       };
       
-      // Proceed with API call if the form was submitted
       if (submitted == "true" && mobileNumber) {
           
           var keyword = null;
@@ -52,17 +49,10 @@ try {
               }
           }
       }
-      
-  } else {
-      // Fallback/Error logging if the DE row is not found
-      // Write("Credentials not found in Data Extension.");
   }
+} catch(e) {}
 
-} catch(e) {
-  // Silent catch. Consider writing to an Error Log DE for debugging.
-}
 
-/* --- HELPER FUNCTIONS --- */
 function getToken(setup) {
     var config = {
         url : setup.authBaseURI + "v2/token",
@@ -101,18 +91,15 @@ function queueSMSKeyword(setup, accessToken, mobileNumber, contactKey, keywordTe
   
 <script>
     window.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);
         
-        if (urlParams.get('submitted') === 'true' || document.querySelector('input[name="submitted"]')) {
+        const isSubmitted = "%%=v(@submitted)=%%" === "true";
+        
+        if (isSubmitted) {
             const confirmation = document.getElementById('confirmation');
             if(confirmation) {
                 confirmation.style.display = 'block';
                 setTimeout(() => {
                     confirmation.style.display = 'none';
- 
-                    const url = new URL(window.location);
-                    url.searchParams.delete('submitted');
-                    window.history.replaceState({}, document.title, url.toString());
                 }, 3000);
             }
         }
