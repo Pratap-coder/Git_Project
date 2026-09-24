@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+ <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+ <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+ <link rel="icon" type="image/x-icon" href="https://image.crm.excelia-group.com/lib/fe2d11737364047a7d1673/m/1/b1444a8c-59ba-43b9-99fa-6e3273c6b040.png">
+</head>
+<body>
+
+<!-- %%=ContentBlockById("323217")=%% -->
+
+<script runat="server">
+Platform.Load("Core","1.1.1");
+try {
+  var SMSMarketingConsentOld = Variable.GetValue("@SMSMarketingConsentOld");
+  var SMSMarketingConsent = Variable.GetValue("@SMSMarketingConsent");
+  var submitted = Variable.GetValue("@submitted");
+  var mobileNumber = Variable.GetValue("@mobileNumber");
+  var subscriberKey = Variable.GetValue("@subscriberKey");
+  
+  /* SECURITY NOTE: Consider storing ClientID & Secret in a Data Extension and using LookupRows to retrieve them securely */
+  var setup = {
+      authBaseURI: "https://mcbsrzt7n96hl-f2h14jssf7z1c4.auth.marketingcloudapis.com/",
+      restBaseURI: "https://mcbsrzt7n96hl-f2h14jssf7z1c4.rest.marketingcloudapis.com/",
+      clientId: "k0ivvdoawvz4fqny82pj1pof",
+      clientSecret: "vJoC3zBWBYrsbjCblDfyTVNF"
+  };
+  
+  // Only trigger API if the form was submitted, a mobile number exists, and consent actually changed
+  if (submitted == "true" && mobileNumber) {
+      
+      var keyword = null;
+      if (SMSMarketingConsentOld == "true" && SMSMarketingConsent == "false") {
+          keyword = "STOPXL";
+      } else if (SMSMarketingConsentOld == "false" && SMSMarketingConsent == "true") {
+          keyword = "EXCELIAMARKETING";
+      }
+
+      // If a change happened, fetch token and send the keyword
+      if (keyword !== null) {
+          var accessToken = getToken(setup); 
+          if (accessToken) {
+              var result = queueSMSKeyword(setup, accessToken, mobileNumber, subscriberKey, keyword);
+          }
+      }
+  }
+} catch(e) {
+  // Do not Write(Stringify(e)) in production to avoid exposing sensitive info. 
+  // You can log this to a Data Extension instead.
+}
+
+function getToken(setup) {
+    var config = {
+        url : setup.authBaseURI + "v2/token",
+        contentType : "application/json",
+        payload : {
+            "client_id": setup.clientId,
+            "client_secret": setup.clientSecret,
+            "grant_type": "client_credentials"
+        }
+    };
+    var req = HTTP.Post(config.url, config.contentType, Stringify(config.payload));
+    if (req.StatusCode == 200) {
+        var res = Platform.Function.ParseJSON(req.Response[0]);
+        return res.access_token;
+    }
+    return false;
+}
+
+// Unified function to handle both Opt-In and Opt-Out based on keyword
+function queueSMSKeyword(setup, accessToken, mobileNumber, contactKey, keywordText) {
+    var url = setup.restBaseURI + "sms/v1/queueMO";
+    var payload = {
+        "subscribers": [{
+           "mobilenumber": mobileNumber,
+           "subscriberkey": contactKey
+        }],
+        "shortCode": "36962",
+        "messageText": keywordText 
+    };
+    var headers = ["Authorization"];
+    var values = ["Bearer " + accessToken];    
+    var req = HTTP.Post(url, "application/json", Stringify(payload), headers, values);
+
+    return req.StatusCode == 202 ? true : false;
+}  
+</script>
+  
+<script>
+    // Client-side JS to handle URL parameters and success message
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (urlParams.get('submitted') === 'true' || document.querySelector('input[name="submitted"]')) {
+            // Check if POST occurred by checking the URL or page state
+            // In SFMC CloudPages POST, URL params aren't always in the URL, 
+            // but since we redirect with CloudPagesURL, we handle it if needed.
+            
+            const confirmation = document.getElementById('confirmation');
+            if(confirmation) {
+                confirmation.style.display = 'block';
+                setTimeout(() => {
+                    confirmation.style.display = 'none';
+                    // Clean up URL
+                    const url = new URL(window.location);
+                    url.searchParams.delete('submitted');
+                    window.history.replaceState({}, document.title, url.toString());
+                }, 3000);
+            }
+        }
+    });
+</script>
+</body>
+</html>

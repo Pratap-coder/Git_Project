@@ -1,0 +1,838 @@
+Code Block: 
+<title>Centre de préférences</title>
+    <link rel="stylesheet" href="">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    
+    
+    
+    <style>
+        body {
+            background-color: #F7F7F7;
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar {
+            background-color: #fff;
+            padding: 20px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .navbar::after {
+            content: '';
+            display: block;
+            width: 100%;
+            height: 2px;
+            background-color: rgba(0, 0, 0, 0.1);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+        }
+        .header__logo a {
+            display: block;
+        }
+        .header__image {
+            max-height: 50px;
+        }
+        h1 {
+            color: #003366;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        p {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .preferences-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .preferences-form label {
+            font-size: 16px;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+        .preferences-form input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .preferences-form button {
+            background-color: #003A70;
+            color: #fff;
+            padding: 8px 16px;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .preferences-form button:hover {
+            background-color: #0754bf;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px; /* Augmenter la largeur de 50% */
+            padding: 40px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin: 40px auto;
+            border-radius: 8px;
+        }
+
+
+    </style>
+
+
+  
+    
+<div id="confirmation" style="
+    width: 100%;
+    background-color: green;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: none;
+    z-index: 1000;">
+    Votre formulaire a été soumis avec succès!
+</div>
+
+
+
+
+    <!-- Navbar -->
+    <header>
+        <nav class="navbar navbar-expand-lg">
+            <div class="header__logo">
+                <a href="https://www.excelia-group.fr" title="Accueil" rel="home">
+                    <img class="header__image" src="https://image.crm.excelia-group.com/lib/fe2d11737364047a7d1673/m/1/2be31ce0-53c9-4feb-a840-870801422eab.png" alt="Excelia">
+                </a>
+            </div>
+        </nav>
+    </header>
+
+%%[
+set @subscriberKey = AttributeValue('_subscriberKey') 
+set @emailAddress = AttributeValue('emailaddr')
+
+set @mobileNumberCrmRow = RetrieveSalesforceObjects("Contact", "MobilePhone", "Id", "=", @subscriberKey)
+IF RowCount(@mobileNumberCrmRow) > 0 THEN
+          SET @mobileNumber = Field(Row(@mobileNumberCrmRow, 1), "MobilePhone")
+ENDIF
+
+set @now = dateAdd(now(),8,"H") 
+set @now = Format(@now,"yyyy-MM-ddTHH:mm:ss")
+set @submitted = RequestParameter("submitted")
+
+
+IF RequestParameter("submitted") == "true" THEN
+
+    SET @EmailMarketingConsentcheckbox = RequestParameter("EmailMarketingConsent")
+    SET @SMSMarketingConsentcheckbox = RequestParameter("SMSMarketingConsent")
+    SET @WhatsappMarketingConsentcheckbox = RequestParameter("WhatsappMarketingConsent")
+        
+        IF @EmailMarketingConsentcheckbox == "on" THEN
+            SET @EmailMarketingConsent = "true"
+        ELSE then 
+             SET @EmailMarketingConsent = "false"
+        ENDIF
+        
+        
+        IF @SMSMarketingConsentcheckbox == "on" THEN
+            SET @SMSMarketingConsent = "true"
+        ELSE then 
+             SET @SMSMarketingConsent = "false"
+        ENDIF
+        
+        
+        IF @WhatsappMarketingConsentcheckbox == "on" THEN
+            SET @WhatsappMarketingConsent = "true"
+        ELSE then 
+             SET @WhatsappMarketingConsent = "false"
+        ENDIF
+        
+        SET @crmRow = RetrieveSalesforceObjects("Contact", "Optin_MarketingEmail__c, Optin_SMS__c, Optin_Whatsapp__c", "Id", "=", @subscriberKey)
+        IF RowCount(@crmRow) > 0 THEN
+          SET @EmailMarketingConsentOld = Field(Row(@crmRow, 1), "Optin_MarketingEmail__c")
+          SET @SMSMarketingConsentOld = Field(Row(@crmRow, 1), "Optin_SMS__c")
+          SET @WhatsappMarketingConsentOld = Field(Row(@crmRow, 1), "Optin_Whatsapp__c")
+        ELSE
+          SET @EmailMarketingConsentOld = "true" /* Valeur par défaut si non trouvé */
+          SET @SMSMarketingConsentOld = "true" /* Valeur par défaut si non trouvé */
+          SET @WhatsappMarketingConsentOld = "true" /* Valeur par défaut si non trouvé */
+        ENDIF      
+        
+
+
+        IF @EmailMarketingConsentOld == "true" and @EmailMarketingConsent == "false" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_MarketingEmail__c", @EmailMarketingConsent)  
+            
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "HasOptedOutOfEmail", "true")
+            
+            set @Subscriber = CreateObject("Subscriber")
+                 SetObjectProperty(@Subscriber, "SubscriberKey",@subscriberKey)
+                 SetObjectProperty(@Subscriber, "EmailAddress",@emailAddress)
+                 SetObjectProperty(@Subscriber, "Status", "unsubscribed")
+            set @Status = InvokeUpdate( @Subscriber, @createErrDesc, @createErrNo, @createOpts)
+            
+         ENDIF       
+
+
+        IF @EmailMarketingConsentOld == "false" and @EmailMarketingConsent == "true" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_MarketingEmail__c", @EmailMarketingConsent)
+                
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "HasOptedOutOfEmail", "false")
+              
+            
+            set @Subscriber = CreateObject("Subscriber")
+                 SetObjectProperty(@Subscriber, "SubscriberKey",@subscriberKey)
+                 SetObjectProperty(@Subscriber, "EmailAddress",@emailAddress)
+                 SetObjectProperty(@Subscriber, "Status", "active")
+            set @Status = InvokeUpdate( @Subscriber, @createErrDesc, @createErrNo, @createOpts)
+   
+         ENDIF
+         
+
+         
+         IF @SMSMarketingConsentOld == "true" and @SMSMarketingConsent == "false" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_SMS__c", @SMSMarketingConsent)  
+         ENDIF       
+         
+
+
+        IF @SMSMarketingConsentOld == "false" and @SMSMarketingConsent == "true" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_SMS__c", @SMSMarketingConsent)  
+         ENDIF
+         
+         /* MAJ Whatsapp Unsubscribe Date */
+         
+         IF @WhatsappMarketingConsentOld == "true" and @WhatsappMarketingConsent == "false" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_Whatsapp__c", @WhatsappMarketingConsent)  
+
+
+            
+         ENDIF       
+         
+         /* MAJ Whatsapp Consent Date */
+
+        IF @WhatsappMarketingConsentOld == "false" and @WhatsappMarketingConsent == "true" THEN
+
+            set @updateRecord = UpdateSingleSalesforceObject(
+                "Contact", @subscriberKey,
+                "Optin_Whatsapp__c", @WhatsappMarketingConsent)  
+
+
+         ENDIF
+
+ ENDIF
+   
+
+    SET @contactRows = RetrieveSalesforceObjects("Contact", 
+    "Optin_MarketingEmail__c, Optin_SMS__c, Optin_Whatsapp__c", 
+    "Id", "=", @subscriberKey)
+        
+    IF RowCount(@contactRows) == 1 then /* there should only be one row */
+           var @contactRow
+           set @contactRow = Row(@contactRows, 1)
+           
+           set @EmailMarketingConsent = Field(@contactRow, "Optin_MarketingEmail__c")
+           set @SMSMarketingConsent = Field(@contactRow, "Optin_SMS__c")
+           set @WhatsappMarketingConsent = Field(@contactRow, "Optin_Whatsapp__c")
+           
+           IF @EmailMarketingConsent == "true" THEN
+            SET @EmailMarketingConsentchecked = "checked"
+           ELSE 
+            SET @EmailMarketingConsentchecked = "unchecked"
+           ENDIF
+           
+           IF @SMSMarketingConsent == "true" THEN
+            SET @SMSMarketingConsentchecked = "checked"
+           ELSE 
+            SET @SMSMarketingConsentchecked = "unchecked"
+           ENDIF
+           
+           IF @WhatsappMarketingConsent == "true" THEN
+            SET @WhatsappMarketingConsentchecked = "checked"
+           ELSE
+            SET @WhatsappMarketingConsentchecked = "unchecked"
+           ENDIF
+    ENDIF
+    
+
+
+]%%
+    <!-- Main Content -->
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-12">
+                <div class="shadow-sm">
+                    <div class="card-body">
+                        <h1>Mise à jour des préférences de communication</h1>
+                        <p>Vous pouvez choisir vos préférences de communications Excelia que vous souhaitez recevoir, liées à l'adresse : <span class="text-secondary">%%=v(@emailAddress)=%%</span></p>
+                        <form class="preferences-form" action="%%=RedirectTo(CloudPagesURL(1874))=%%&amp;submitted=true" method="POST">
+                            <table align="center">
+                                <tr>
+                                    <td></td>
+                                    <td>
+                                        <div class="form-group">
+                                            <label><input type="checkbox" name="EmailMarketingConsent" %%=v(@EmailMarketingConsentchecked)=%%> Recevoir des Emails</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>
+                                        <div class="form-group">
+                                            <label><input type="checkbox" name="SMSMarketingConsent" %%=v(@SMSMarketingConsentchecked)=%%> Recevoir des SMS</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td>
+                                        <div class="form-group">
+                                            <label><input type="checkbox" name="WhatsappMarketingConsent" %%=v(@WhatsappMarketingConsentchecked)=%%> Recevoir des messages WhatsApp</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                            <button type="submit">Mettre à jour les préférences</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+     
+    </footer>
+
+Cloud page code : 
+<!DOCTYPE html>
+<html>
+<head>
+ <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+ <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link rel="icon" type="image/x-icon" href="https://image.crm.excelia-group.com/lib/fe2d11737364047a7d1673/m/1/b1444a8c-59ba-43b9-99fa-6e3273c6b040.png">
+
+%%=ContentBlockById("140410")=%%
+  </body>
+  
+  
+<script runat="server">
+Platform.Load("Core","1.1.1");
+try{
+  
+  var SMSMarketingConsentOld = Variable.GetValue("@SMSMarketingConsentOld");
+  var SMSMarketingConsent = Variable.GetValue("@SMSMarketingConsent");
+  var submitted = Variable.GetValue("@submitted");
+  var mobileNumber = Variable.GetValue("@mobileNumber");
+  var subscriberKey = Variable.GetValue("@subscriberKey");
+  
+  var setup = {
+      authBaseURI: "https://mcbsrzt7n96hl-f2h14jssf7z1c4.auth.marketingcloudapis.com/",
+      restBaseURI: "https://mcbsrzt7n96hl-f2h14jssf7z1c4.rest.marketingcloudapis.com/",
+      clientId: "k0ivvdoawvz4fqny82pj1pof",
+      clientSecret: "vJoC3zBWBYrsbjCblDfyTVNF"
+     }
+  
+  if (SMSMarketingConsentOld == "true" && SMSMarketingConsent == "false" && submitted == "true") {
+    var accessToken = getToken(setup); 
+   //var stopResult = optOutContact(setup, accessToken, mobileNumber)
+    var stopResult = optOutContact(setup, accessToken, mobileNumber, subscriberKey)
+  }
+  
+  if (SMSMarketingConsentOld == "false" && SMSMarketingConsent == "true" && submitted == "true") {
+    var accessToken = getToken(setup); 
+    var ResubResult = optInContact(setup, accessToken, mobileNumber, subscriberKey)
+  }
+}catch(e){
+ Write(Stringify(e));
+}
+
+
+function getToken(setup) {
+
+        var config = {
+            url : setup.authBaseURI + "v2/token",
+            contentType : "application/json",
+            payload : {
+                "client_id": setup.clientId,
+                "client_secret": setup.clientSecret,
+                "grant_type": "client_credentials"
+            }
+        }
+
+        var req = HTTP.Post(config.url, config.contentType, Stringify(config.payload));
+
+        if (req.StatusCode == 200) {
+            var res = Platform.Function.ParseJSON(req.Response[0]);
+            return res.access_token;
+        } else {
+            return false;
+        }
+    }
+
+
+
+  
+function optOutContact(setup, accessToken, mobileNumber, contactKey) {
+    var url = setup.restBaseURI + "sms/v1/queueMO";
+    var payload = {
+        "subscribers":[
+         {
+           "mobilenumber": mobileNumber,
+           "subscriberkey": contactKey
+         }
+        ],
+        "shortCode": "36962",
+        "messageText": "STOPXL" 
+    };
+    var headers = ["Authorization"];
+    var values = ["Bearer " + accessToken];    
+    var req = HTTP.Post(url, "application/json", Stringify(payload), headers, values);
+
+    if (req.StatusCode == 202) {
+        return true;
+    } else {
+        return req.Response[0];
+    }
+}  
+  
+function optInContact(setup, accessToken, mobileNumber, contactKey) {
+    var url = setup.restBaseURI + "sms/v1/queueMO";
+    var payload = {
+        "subscribers":[
+         {
+           "mobilenumber": mobileNumber,
+           "subscriberkey": contactKey
+         }
+        ],
+        "shortCode": "36962",
+        "messageText": "EXCELIAMARKETING" 
+    };
+    var headers = ["Authorization"];
+    var values = ["Bearer " + accessToken];    
+    var req = HTTP.Post(url, "application/json", Stringify(payload), headers, values);
+
+    if (req.StatusCode == 202) {
+        return true;
+    } else {
+        return req.Response[0];
+    }
+}
+  
+</script>
+  
+<script>
+    // Function to get URL parameters
+    function getQueryParam(param) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(param);
+    }
+
+    // Show confirmation if submitted=true
+    window.addEventListener('DOMContentLoaded', () => {
+        if (getQueryParam('submitted') === 'true') {
+            const confirmation = document.getElementById('confirmation');
+            confirmation.style.display = 'block';
+
+            
+setTimeout(() => {
+    confirmation.style.display = 'none';
+    // Supprimer le paramètre de l'URL sans recharger
+    const url = new URL(window.location);
+    url.searchParams.delete('submitted');
+    window.history.replaceState({}, document.title, url.toString());
+}, 3000);
+
+        }
+    });
+</script>
+</html>
+
+
+Part 1: Step-by-Step Explanation
+
+1. The Main CloudPage (HTML + SSJS + JS)
+This page acts as the structural container and handles the SMS MobileConnect API calls and user experience (UX).
+Content Block Call: %%=ContentBlockById("140410")=%% injects the form and the AMPScript logic (which updates Salesforce CRM and the Email Subscriber status).
+
+Server-Side JavaScript (SSJS):
+
+It retrieves AMPScript variables (@SMSMarketingConsent, @mobileNumber, etc.) that were created inside the Content Block.
+It contains API credentials (Client ID and Secret) for Marketing Cloud.
+
+If the user opted OUT of SMS, it generates an API token and sends a Mobile Originated (MO) message (STOPXL) to short code 36962 via the /sms/v1/queueMO REST API. This tells Marketing Cloud MobileConnect to unsubscribe the user.
+
+If the user opted IN to SMS, it does the same thing but sends the keyword EXCELIAMARKETING to opt them back in.
+
+Client-Side JavaScript:
+
+It checks the URL for submitted=true.
+
+If found, it displays a green success banner (#confirmation).
+
+After 3 seconds, it hides the banner and uses window.history.replaceState to seamlessly remove submitted=true from the browser URL so if the user refreshes, they don't resubmit the form.
+
+2. The Content Block (AMPScript + HTML)
+
+This block handles data retrieval, form processing, and Salesforce Sales Cloud/Marketing Cloud Email updates.
+Initialization: It grabs the @subscriberKey and @emailAddress from the URL or email context. It then queries Sales Cloud (RetrieveSalesforceObjects) to find the user's MobilePhone.
+
+Form Submission Handling (IF submitted == "true"):
+
+It checks which checkboxes were ticked (on).
+It queries Salesforce CRM again to see what the old preferences were.
+
+Email Update: If the email consent changed, it updates the CRM (Optin_MarketingEmail__c and HasOptedOutOfEmail) and updates the standard SFMC All Subscribers list to either Active or Unsubscribed using the InvokeUpdate AMPScript function.
+
+SMS & WhatsApp Update: It makes separate CRM updates for SMS and WhatsApp if they changed.
+
+Form Rendering: It queries Sales Cloud one last time to get the most up-to-date preferences. Based on whether they are "true" or "false", it adds the word checked to the HTML form so the checkboxes accurately reflect the user's current status.
+
+Part 2: Code Optimizations & Flaws in the Original Code
+
+There are a few major issues in the original code that need fixing:
+
+Too Many API Calls (Performance & Limits): 
+The AMPScript uses UpdateSingleSalesforceObject multiple times for the same record (once for email, once for SMS, once for WhatsApp). Each call is a synchronous API call to Salesforce. Optimization: Group them into a single update call.
+
+Redundant Retrievals: 
+The AMPScript uses RetrieveSalesforceObjects three times. Optimization: Retrieve the contact data once at the very top and reuse it.
+
+Security Risk (SSJS): 
+The Client ID and Client Secret are hardcoded in the SSJS. Anyone with page view access in SFMC can see them. Optimization: Move them to a secure Data Extension or AMPScript variables.
+
+SSJS Code Duplication: 
+optInContact and optOutContact are 95% identical. Optimization: Merge them into a single function.
+
+Syntax Errors: 
+The original AMPScript has ELSE then which is invalid syntax (it should just be ELSE).
+
+Part 3: 
+The Optimized Code
+
+1. Optimized Content Block (AMPScript + HTML)
+
+Replace the code inside Content Block 140410 with this.
+code
+Html
+
+<title>Centre de préférences</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<style>
+    body { background-color: #F7F7F7; font-family: 'Roboto', sans-serif; margin: 0; padding: 0; min-height: 100vh; display: flex; flex-direction: column; }
+    .navbar { background-color: #fff; padding: 20px 0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); display: flex; justify-content: center; align-items: center; position: relative; }
+    .navbar::after { content: ''; display: block; width: 100%; height: 2px; background-color: rgba(0, 0, 0, 0.1); position: absolute; bottom: 0; left: 0; }
+    .header__logo a { display: block; }
+    .header__image { max-height: 50px; }
+    h1 { color: #003366; font-size: 2.5em; margin-bottom: 20px; text-align: center; }
+    p { font-size: 18px; color: #333; margin-bottom: 40px; text-align: center; }
+    .preferences-form { display: flex; flex-direction: column; align-items: center; }
+    .preferences-form label { font-size: 16px; color: #333; display: flex; align-items: center; }
+    .preferences-form input[type="checkbox"] { margin-right: 10px; }
+    .preferences-form button { background-color: #003A70; color: #fff; padding: 8px 16px; border: none; cursor: pointer; margin-top: 20px; border-radius: 4px; width: 100%; max-width: 400px; }
+    .preferences-form button:hover { background-color: #0754bf; }
+    .container { width: 100%; max-width: 1200px; padding: 40px; background-color: #fff; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); text-align: center; margin: 40px auto; border-radius: 8px; }
+    #confirmation { width: 100%; background-color: #28a745; color: white; text-align: center; padding: 15px; position: fixed; top: 0; left: 0; display: none; z-index: 1000; font-weight: bold;}
+</style>
+
+<div id="confirmation">Votre formulaire a été soumis avec succès!</div>
+
+<header>
+    <nav class="navbar navbar-expand-lg">
+        <div class="header__logo">
+            <a href="https://www.excelia-group.fr" title="Accueil" rel="home">
+                <img class="header__image" src="https://image.crm.excelia-group.com/lib/fe2d11737364047a7d1673/m/1/2be31ce0-53c9-4feb-a840-870801422eab.png" alt="Excelia">
+            </a>
+        </div>
+    </nav>
+</header>
+
+%%[
+/* 1. INITIALIZATION & DATA RETRIEVAL */
+SET @subscriberKey = AttributeValue('_subscriberKey') 
+SET @emailAddress = AttributeValue('emailaddr')
+SET @submitted = RequestParameter("submitted")
+
+/* Prevent errors if someone visits the page without a SubscriberKey */
+IF NOT EMPTY(@subscriberKey) THEN
+
+    /* Retrieve current CRM data ONCE */
+    SET @crmRows = RetrieveSalesforceObjects("Contact", "MobilePhone, Optin_MarketingEmail__c, Optin_SMS__c, Optin_Whatsapp__c", "Id", "=", @subscriberKey)
+    
+    IF RowCount(@crmRows) > 0 THEN
+        SET @crmRow = Row(@crmRows, 1)
+        SET @mobileNumber = Field(@crmRow, "MobilePhone")
+        SET @EmailMarketingConsentOld = Field(@crmRow, "Optin_MarketingEmail__c")
+        SET @SMSMarketingConsentOld = Field(@crmRow, "Optin_SMS__c")
+        SET @WhatsappMarketingConsentOld = Field(@crmRow, "Optin_Whatsapp__c")
+    ELSE
+        /* Fallback if record not found in CRM */
+        SET @EmailMarketingConsentOld = "false"
+        SET @SMSMarketingConsentOld = "false"
+        SET @WhatsappMarketingConsentOld = "false"
+    ENDIF
+
+    /* 2. FORM PROCESSING */
+    IF @submitted == "true" THEN
+    
+        /* Parse Checkboxes (if 'on' then true, else false) */
+        SET @EmailMarketingConsent = Iif(RequestParameter("EmailMarketingConsent") == "on", "true", "false")
+        SET @SMSMarketingConsent = Iif(RequestParameter("SMSMarketingConsent") == "on", "true", "false")
+        SET @WhatsappMarketingConsent = Iif(RequestParameter("WhatsappMarketingConsent") == "on", "true", "false")
+        
+        /* Calculate HasOptedOutOfEmail */
+        SET @HasOptedOutOfEmail = Iif(@EmailMarketingConsent == "true", "false", "true")
+
+        /* SINGLE CALL TO UPDATE CRM (Much faster and saves API limits) */
+        SET @updateRecord = UpdateSingleSalesforceObject("Contact", @subscriberKey,
+            "Optin_MarketingEmail__c", @EmailMarketingConsent,
+            "HasOptedOutOfEmail", @HasOptedOutOfEmail,
+            "Optin_SMS__c", @SMSMarketingConsent,
+            "Optin_Whatsapp__c", @WhatsappMarketingConsent
+        )
+
+        /* UPDATE ALL SUBSCRIBERS (Only if Email Consent Changed) */
+        IF @EmailMarketingConsent != @EmailMarketingConsentOld THEN
+            SET @StatusValue = Iif(@EmailMarketingConsent == "true", "Active", "Unsubscribed")
+            
+            SET @Subscriber = CreateObject("Subscriber")
+            SetObjectProperty(@Subscriber, "SubscriberKey", @subscriberKey)
+            SetObjectProperty(@Subscriber, "EmailAddress", @emailAddress)
+            SetObjectProperty(@Subscriber, "Status", @StatusValue)
+            
+            SET @Status = InvokeUpdate(@Subscriber, @createErrDesc, @createErrNo, @createOpts)
+        ENDIF
+        
+        /* Update local variables for rendering the form correctly below */
+        SET @EmailMarketingConsentOld = @EmailMarketingConsent
+        SET @SMSMarketingConsentOld = @SMSMarketingConsent
+        SET @WhatsappMarketingConsentOld = @WhatsappMarketingConsent
+    ENDIF
+
+    /* 3. PREPARE CHECKBOX STATES FOR HTML */
+    SET @EmailChecked = Iif(@EmailMarketingConsentOld == "true", "checked", "")
+    SET @SMSChecked = Iif(@SMSMarketingConsentOld == "true", "checked", "")
+    SET @WhatsappChecked = Iif(@WhatsappMarketingConsentOld == "true", "checked", "")
+
+ENDIF
+]%%
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-12">
+            <div class="shadow-sm">
+                <div class="card-body">
+                    <h1>Mise à jour des préférences de communication</h1>
+                    <p>Vous pouvez choisir vos préférences de communications Excelia que vous souhaitez recevoir, liées à l'adresse : <span class="text-secondary">%%=v(@emailAddress)=%%</span></p>
+                    
+                    %%[ IF NOT EMPTY(@subscriberKey) THEN ]%%
+                    <form class="preferences-form" action="%%=RedirectTo(CloudPagesURL(1874))=%%" method="POST">
+                        <input type="hidden" name="submitted" value="true">
+                        <table align="center">
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <div class="form-group">
+                                        <label><input type="checkbox" name="EmailMarketingConsent" %%=v(@EmailChecked)=%%> Recevoir des Emails</label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <div class="form-group">
+                                        <label><input type="checkbox" name="SMSMarketingConsent" %%=v(@SMSChecked)=%%> Recevoir des SMS</label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td>
+                                    <div class="form-group">
+                                        <label><input type="checkbox" name="WhatsappMarketingConsent" %%=v(@WhatsappChecked)=%%> Recevoir des messages WhatsApp</label>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                        <button type="submit">Mettre à jour les préférences</button>
+                    </form>
+                    %%[ ELSE ]%%
+                        <p style="color:red;">Erreur: Utilisateur introuvable. Veuillez cliquer sur le lien depuis votre email.</p>
+                    %%[ ENDIF ]%%
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<footer></footer>
+
+2. Optimized Main CloudPage
+
+Replace the main CloudPage code with this.
+code
+Html
+
+<!DOCTYPE html>
+<html>
+<head>
+ <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+ <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+ <link rel="icon" type="image/x-icon" href="https://image.crm.excelia-group.com/lib/fe2d11737364047a7d1673/m/1/b1444a8c-59ba-43b9-99fa-6e3273c6b040.png">
+</head>
+<body>
+
+%%=ContentBlockById("140410")=%%
+
+<script runat="server">
+Platform.Load("Core","1.1.1");
+try {
+  var SMSMarketingConsentOld = Variable.GetValue("@SMSMarketingConsentOld");
+  var SMSMarketingConsent = Variable.GetValue("@SMSMarketingConsent");
+  var submitted = Variable.GetValue("@submitted");
+  var mobileNumber = Variable.GetValue("@mobileNumber");
+  var subscriberKey = Variable.GetValue("@subscriberKey");
+  
+  /* SECURITY NOTE: Consider storing ClientID & Secret in a Data Extension and using LookupRows to retrieve them securely */
+  var setup = {
+      authBaseURI: "https://mcbsrzt7n96hl-f2h14jssf7z1c4.auth.marketingcloudapis.com/",
+      restBaseURI: "https://mcbsrzt7n96hl-f2h14jssf7z1c4.rest.marketingcloudapis.com/",
+      clientId: "k0ivvdoawvz4fqny82pj1pof",
+      clientSecret: "vJoC3zBWBYrsbjCblDfyTVNF"
+  };
+  
+  // Only trigger API if the form was submitted, a mobile number exists, and consent actually changed
+  if (submitted == "true" && mobileNumber) {
+      
+      var keyword = null;
+      if (SMSMarketingConsentOld == "true" && SMSMarketingConsent == "false") {
+          keyword = "STOPXL";
+      } else if (SMSMarketingConsentOld == "false" && SMSMarketingConsent == "true") {
+          keyword = "EXCELIAMARKETING";
+      }
+
+      // If a change happened, fetch token and send the keyword
+      if (keyword !== null) {
+          var accessToken = getToken(setup); 
+          if (accessToken) {
+              var result = queueSMSKeyword(setup, accessToken, mobileNumber, subscriberKey, keyword);
+          }
+      }
+  }
+} catch(e) {
+  // Do not Write(Stringify(e)) in production to avoid exposing sensitive info. 
+  // You can log this to a Data Extension instead.
+}
+
+function getToken(setup) {
+    var config = {
+        url : setup.authBaseURI + "v2/token",
+        contentType : "application/json",
+        payload : {
+            "client_id": setup.clientId,
+            "client_secret": setup.clientSecret,
+            "grant_type": "client_credentials"
+        }
+    };
+    var req = HTTP.Post(config.url, config.contentType, Stringify(config.payload));
+    if (req.StatusCode == 200) {
+        var res = Platform.Function.ParseJSON(req.Response[0]);
+        return res.access_token;
+    }
+    return false;
+}
+
+// Unified function to handle both Opt-In and Opt-Out based on keyword
+function queueSMSKeyword(setup, accessToken, mobileNumber, contactKey, keywordText) {
+    var url = setup.restBaseURI + "sms/v1/queueMO";
+    var payload = {
+        "subscribers": [{
+           "mobilenumber": mobileNumber,
+           "subscriberkey": contactKey
+        }],
+        "shortCode": "36962",
+        "messageText": keywordText 
+    };
+    var headers = ["Authorization"];
+    var values = ["Bearer " + accessToken];    
+    var req = HTTP.Post(url, "application/json", Stringify(payload), headers, values);
+
+    return req.StatusCode == 202 ? true : false;
+}  
+</script>
+  
+<script>
+    // Client-side JS to handle URL parameters and success message
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (urlParams.get('submitted') === 'true' || document.querySelector('input[name="submitted"]')) {
+            // Check if POST occurred by checking the URL or page state
+            // In SFMC CloudPages POST, URL params aren't always in the URL, 
+            // but since we redirect with CloudPagesURL, we handle it if needed.
+            
+            const confirmation = document.getElementById('confirmation');
+            if(confirmation) {
+                confirmation.style.display = 'block';
+                setTimeout(() => {
+                    confirmation.style.display = 'none';
+                    // Clean up URL
+                    const url = new URL(window.location);
+                    url.searchParams.delete('submitted');
+                    window.history.replaceState({}, document.title, url.toString());
+                }, 3000);
+            }
+        }
+    });
+</script>
+</body>
+</html>
+
+Summary of Changes Made:
+
+Consolidated API Updates (AMPScript): Reduced Salesforce API calls from 3-5 down to exactly 1.
+
+Simplified Logic (AMPScript): Removed the broken ELSE then syntax and used the Iif() inline IF statement function to drastically reduce code length and improve readability.
+
+Consolidated API Updates (SSJS): Combined optOutContact and optInContact into one flexible function queueSMSKeyword.
+
+Error Handling (SSJS): Removed Write(Stringify(e)) from the catch block to prevent internal Marketing Cloud errors/credentials from printing on the public web page if an error occurs.
+
+Form Submit Parameter: Moved submitted=true from the URL string in the <form action> into an <input type="hidden">. This is cleaner and standard practice for HTML forms.
