@@ -1,0 +1,356 @@
+<!--
+%%[
+/* ----------------------------------------------------
+   1. AMPSCRIPT BACK-END PROCESSING
+   ---------------------------------------------------- */
+SET @subscriberKey = AttributeValue("_subscriberkey")
+SET @jobId = AttributeValue("jobid")
+SET @email = AttributeValue("emailaddr")
+
+/* Fallbacks pour les tests hors contexte email */
+IF EMPTY(@subscriberKey) THEN SET @subscriberKey = RequestParameter("sk") ENDIF
+IF EMPTY(@jobId) THEN SET @jobId = 0 ENDIF
+IF EMPTY(@email) THEN SET @email = "test@biogaran.fr" ENDIF
+
+/* Vérification si déjà soumis */
+SET @hasSubmitted = Lookup("Biogaran_Survey_Responses", "Issubmitted", "SubscriberKey", @subscriberKey, "JobId", @jobId)
+
+IF @hasSubmitted == "True" THEN
+    /* Redirection vers LP3 (Erreur) - PageId 5307 */
+    Redirect(CloudPagesURL(5307))
+ENDIF
+
+/* Traitement de la soumission du formulaire (POST) */
+SET @isSubmit = RequestParameter("isSubmit")
+
+IF @isSubmit == "true" THEN
+    
+    /* Enregistrement dans la Data Extension avec les noms de champs EXACTS du dictionnaire */
+    UpsertData(
+        "Biogaran_Survey_Responses", 2, 
+        "SubscriberKey", @subscriberKey, 
+        "JobId", @jobId,
+        "Email", @email,
+        "Date_soumission", Now(),
+        "Issubmitted", "True",
+        "Q1_Relation", RequestParameter("q1_relation"),
+        "Q2_Travail", RequestParameter("q2_travail"),
+        "Q3_GammeRemboursee", RequestParameter("q3_gammeremboursee"),
+        "Q3_GammeBiosim", RequestParameter("q3_gammebiosim"),
+        "Q3_GammeOtc", RequestParameter("q3_gammeotc"),
+        "Q3_OffreSimple", RequestParameter("q3_offresimple"),
+        "Q3_OffreTransparente", RequestParameter("q3_offretransparente"),
+        "Q3_OffreSuivi", RequestParameter("q3_offresuivi"),
+        "Q3_Engagements", RequestParameter("q3_engagements"),
+        "Q3_DelaiPaiement", RequestParameter("q3_delaipaiement"),
+        "Q3_AccompBiosim", RequestParameter("q3_accompbiosim"),
+        "Q3_AccompSellout", RequestParameter("q3_accompsellout"),
+        "Q3_DispoProduits", RequestParameter("q3_dispoproduits"),
+        "Q3_RetourRupture", RequestParameter("q3_retourrupture"),
+        "Q3_SecuApprovisionnement", RequestParameter("q3_secuapprovisionnement"),
+        "Q3_SimplifQuot", RequestParameter("q3_simplifquot"),
+        "Q4_Commentaire", RequestParameter("q4_commentaire")
+    )
+    
+    /* Redirection vers LP2 (Confirmation) - PageId 5306 */
+    Redirect(CloudPagesURL(5306))
+ENDIF
+]%%
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biogaran - Enquête de satisfaction</title>
+    <style>
+        /* Base & Reset */
+        body { font-family: Arial, Helvetica, sans-serif; color: #333; margin: 0; padding: 0; background-color: #ffffff; }
+        .container { max-width: 850px; margin: 0 auto; padding: 20px 20px 60px 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header img { max-width: 100%; height: auto; }
+        
+        .q-title-blue { color: #00a0d2; font-weight: bold; }
+        .question-block { margin-bottom: 30px; padding: 15px 0; border-radius: 4px; border: 1px solid transparent; }
+        .question-label { font-size: 14px; color: #000; margin-bottom: 5px; display: block; }
+        .question-sublabel { font-size: 12px; font-weight: normal; color: #000; display: block; margin-top: 2px; margin-bottom: 15px;}
+        
+        /* Error highlighting */
+        .question-block.error { border: 1px solid red; background-color: #fff0f0; padding: 15px; }
+        .question-block.error .question-label, .question-block.error .q-title-blue { color: red; }
+        .grid-row.error .grid-label { color: red; font-weight: bold; }
+        
+        #error-msg { display: none; color: white; background-color: #e50000; padding: 15px; text-align: center; margin-bottom: 20px; font-weight: bold; border-radius: 4px; }
+
+        /* --- 0-10 EXACT SCALE STYLING (UPDATED) --- */
+        
+        /* Suppression de l'espace (gap) entre les cellules */
+        .scale-wrapper { display: flex; flex-wrap: nowrap; gap: 0; } 
+        .scale-wrapper input[type="radio"] { display: none; }
+        
+        .scale-wrapper label {
+            display: inline-flex; justify-content: center; align-items: center;
+            width: 32px; height: 32px;
+            font-size: 12px; font-weight: bold; cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        /* Classe spécifique aux notes de 0 à 10 pour la bordure bleue unie et fusionnée */
+        .scale-wrapper label.scale-num {
+            border: 1px solid #00a0d2; /* Bordure bleue unie */
+            margin-right: -1px; /* Superpose les bordures adjacentes pour éviter le double trait */
+        }
+        
+        /* Couleurs de fond (les bordures ont été retirées d'ici) */
+        .bg-0-2  { background-color: #ffffff; color: #00a0d2; }
+        .bg-3-4  { background-color: #55b2e5; color: #ffffff; }
+        .bg-5-6  { background-color: #006eb6; color: #ffffff; }
+        .bg-7-10 { background-color: #002c6c; color: #ffffff; }
+        
+        /* Bouton NC (Non Concerné) reste détaché */
+        .bg-nc   { background-color: #ffffff; color: #555; border: 1px solid #999; margin-left: 12px; width: 40px !important; }
+
+        /* Bordure rose de sélection (#ec008c) */
+        .scale-wrapper input[type="radio"]:checked + label {
+            border: 2px solid #ec008c !important;
+            position: relative; /* Essentiel avec z-index */
+            z-index: 10;        /* Permet à la bordure rose de passer par-dessus les bordures bleues adjacentes */
+        }
+
+        /* --- GRID Q3 STYLING --- */
+        .section-title { color: #214088; font-size: 13px; text-transform: uppercase; margin-top: 25px; margin-bottom: 15px; font-weight: bold;}
+        .grid-row { display: flex; align-items: center; margin-bottom: 8px; }
+        .grid-label { width: 48%; padding-right: 15px; font-size: 12.5px; line-height: 1.3; color: #000; font-weight: bold;}
+        .grid-scale { width: 52%; display: flex; justify-content: flex-start; }
+
+        /* Q2 Styling */
+        .radio-list { list-style: none; padding: 0; margin-top: 10px; font-size: 13px; color: #000;}
+        .radio-list li { margin-bottom: 6px; display: flex; align-items: center; }
+        .radio-list input[type="radio"] { margin-right: 8px; cursor: pointer; }
+
+        /* Q4 Textarea Styling */
+        textarea { width: 100%; border: 1px solid #33b5e5; padding: 10px; font-family: Arial, sans-serif; font-size: 13px; box-sizing: border-box; margin-top: 10px; resize: vertical; outline: none; }
+        textarea:focus { border: 1px solid #00a0d2; }
+
+        /* Buttons & Footer */
+        .btn-submit { background-color: #ec008c; color: white; border: none; padding: 12px 25px; font-size: 15px; font-weight: bold; cursor: pointer; display: inline-block; margin: 25px 0; border-radius: 4px; transition: background 0.3s;}
+        .btn-submit:hover { background-color: #c90076; }
+        
+        .footer-disclaimer { font-size: 10.5px; color: #333; margin-top: 20px; line-height: 1.4; }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .grid-row { flex-direction: column; align-items: flex-start; margin-bottom: 20px;}
+            .grid-label { width: 100%; margin-bottom: 8px; }
+            .grid-scale { width: 100%; }
+            .scale-wrapper label { width: 28px; height: 28px; font-size: 11px; }
+            .bg-nc { margin-left: 5px; width: 35px !important;}
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="header">
+        <!-- Remplacer par l'URL de votre image hébergée dans SFMC -->
+        <img src="https://image.s50.sfmc-content.com/lib/fe3a11717564047e731476/m/1/6f35b05e-b19f-4799-b53b-db681e329a4c.png" alt="Biogaran">
+    </div>
+
+
+    <div id="error-msg">Merci de répondre à l'ensemble des questions pour soumettre le questionnaire.</div>
+
+    <form id="surveyForm" action="%%=RequestParameter('PAGEURL')=%%" method="POST">
+        <input type="hidden" name="isSubmit" value="true">
+
+        <!-- Q1 -->
+        <div class="question-block" id="qb-q1_relation">
+            <label class="question-label"><span class="q-title-blue">1.</span> Etes-vous satisfait de votre relation avec Biogaran ?*</label>
+            <span class="question-sublabel">Echelle de notation : de « 0, pas du tout satisfait » à « 10 totalement satisfait »</span>
+            <div class="scale-wrapper">
+                <script>
+                    for(let i=0; i<=10; i++) {
+                        let bgClass = (i<=2) ? 'bg-0-2' : (i<=4 ? 'bg-3-4' : (i<=6 ? 'bg-5-6' : 'bg-7-10'));
+                        /* Ajout de la classe "scale-num" ici */
+                        document.write(`<input type="radio" name="q1_relation" value="${i}" id="q1_${i}"><label for="q1_${i}" class="scale-num ${bgClass}">${i}</label>`);
+                    }
+                </script>
+            </div>
+        </div>
+
+        <!-- Q2 -->
+        <div class="question-block" id="qb-q2_travail">
+            <label class="question-label"><span class="q-title-blue">2.</span> Est-ce facile de travailler avec BIOGARAN au quotidien ?*</label>
+            <ul class="radio-list">
+                <li><input type="radio" name="q2_travail" value="Très facile" id="q2_1"><label for="q2_1">Très facile</label></li>
+                <li><input type="radio" name="q2_travail" value="Plutôt facile" id="q2_2"><label for="q2_2">Plutôt facile</label></li>
+                <li><input type="radio" name="q2_travail" value="Ni facile ni difficile" id="q2_3"><label for="q2_3">Ni facile ni difficile</label></li>
+                <li><input type="radio" name="q2_travail" value="Plutôt difficile" id="q2_4"><label for="q2_4">Plutôt difficile</label></li>
+                <li><input type="radio" name="q2_travail" value="Très difficile" id="q2_5"><label for="q2_5">Très difficile</label></li>
+            </ul>
+        </div>
+
+        <!-- Q3 -->
+        <div class="question-block" id="qb-q3">
+            <label class="question-label"><span class="q-title-blue">3.</span> Quel niveau de satisfaction vis-à-vis de Biogaran avez-vous sur ces différents critères ?*</label>
+            <span class="question-sublabel">Echelle de notation : de « 0, pas du tout satisfait » à « 10, totalement satisfait ». Cochez « NC » si vous n'êtes pas concerné par ce critère.</span>
+            
+            <script>
+                // Génération de la grille (0-10 + NC)
+                function renderScale(name) {
+                    let html = '<div class="scale-wrapper">';
+                    for(let i=0; i<=10; i++) {
+                        let bgClass = (i<=2) ? 'bg-0-2' : (i<=4 ? 'bg-3-4' : (i<=6 ? 'bg-5-6' : 'bg-7-10'));
+                        /* Ajout de la classe "scale-num" ici */
+                        html += `<input type="radio" name="${name}" value="${i}" id="${name}_${i}"><label for="${name}_${i}" class="scale-num ${bgClass}">${i}</label>`;
+                    }
+                    html += `<input type="radio" name="${name}" value="NC" id="${name}_nc"><label for="${name}_nc" class="bg-nc">NC</label></div>`;
+                    document.write(html);
+                }
+            </script>
+
+            <!-- SECTION : OFFRE PRODUITS -->
+            <div class="section-title">OFFRE PRODUITS BIOGARAN</div>
+            
+            <div class="grid-row" id="qb-q3_gammeremboursee">
+                <div class="grid-label">Largeur et dynamique de lancement de la gamme remboursée</div>
+                <div class="grid-scale"><script>renderScale('q3_gammeremboursee');</script></div>
+            </div>
+            <div class="grid-row" id="qb-q3_gammebiosim">
+                <div class="grid-label">Largeur et dynamique de lancement de la gamme biosimilaires</div>
+                <div class="grid-scale"><script>renderScale('q3_gammebiosim');</script></div>
+            </div>
+            <div class="grid-row" id="qb-q3_gammeotc">
+                <div class="grid-label">Largeur et dynamique de lancement des gammes OTC,<br>soin des plaies et PMO</div>
+                <div class="grid-scale"><script>renderScale('q3_gammeotc');</script></div>
+            </div>
+
+            <!-- SECTION : OFFRE COMMERCIALE -->
+            <div class="section-title">OFFRE COMMERCIALE BIOGARAN</div>
+            
+            <div class="grid-row" id="qb-q3_offresimple">
+                <div class="grid-label">Simplicité de l'offre commerciale</div>
+                <div class="grid-scale"><script>renderScale('q3_offresimple');</script></div>
+            </div>
+            <div class="grid-row" id="qb-q3_offretransparente">
+                <div class="grid-label">Transparence de l'offre commerciale</div>
+                <div class="grid-scale"><script>renderScale('q3_offretransparente');</script></div>
+            </div>
+            <div class="grid-row" id="qb-q3_offresuivi">
+                <div class="grid-label">Facilité à suivre dans le temps l'offre commerciale</div>
+                <div class="grid-scale"><script>renderScale('q3_offresuivi');</script></div>
+            </div>
+            <div class="grid-row" id="qb-q3_engagements">
+                <div class="grid-label">Respect des engagements commerciaux</div>
+                <div class="grid-scale"><script>renderScale('q3_engagements');</script></div>
+            </div>
+            <div class="grid-row" id="qb-q3_delaipaiement">
+                <div class="grid-label">Délai de paiement</div>
+                <div class="grid-scale"><script>renderScale('q3_delaipaiement');</script></div>
+            </div>
+
+            <!-- SECTION : ACCOMPAGNEMENT -->
+            <div class="section-title">ACCOMPAGNEMENT BIOGARAN</div>
+
+            <div class="grid-row" id="qb-q3_accompbiosim">
+                <div class="grid-label">Accompagnement dans la substitution des biosimilaires</div>
+                <div class="grid-scale"><script>renderScale('q3_accompbiosim');</script></div>
+            </div>
+            <div class="grid-row" id="qb-q3_accompsellout">
+                <div class="grid-label">Accompagnement dans le développement du sell-out OTC<br>(outils d'information, conseils associés, visibilité et merchandising)</div>
+                <div class="grid-scale"><script>renderScale('q3_accompsellout');</script></div>
+            </div>
+            <div class="grid-row" id="qb-q3_dispoproduits">
+                <div class="grid-label">Disponibilité des produits et limitation des ruptures de stock</div>
+                <div class="grid-scale"><script>renderScale('q3_dispoproduits');</script></div>
+            </div>
+            <div class="grid-row" id="qb-q3_retourrupture">
+                <div class="grid-label">Capacité à obtenir rapidement les produits en retour de rupture</div>
+                <div class="grid-scale"><script>renderScale('q3_retourrupture');</script></div>
+            </div>
+            <div class="grid-row" id="qb-q3_secuapprovisionnement">
+                <div class="grid-label">Capacité à sécuriser vos approvisionnements sur les produits en tension</div>
+                <div class="grid-scale"><script>renderScale('q3_secuapprovisionnement');</script></div>
+            </div>
+            <div class="grid-row" id="qb-q3_simplifquot">
+                <div class="grid-label">Capacité de Biogaran à simplifier votre quotidien</div>
+                <div class="grid-scale"><script>renderScale('q3_simplifquot');</script></div>
+            </div>
+        </div>
+
+        <!-- Q4 -->
+        <div class="question-block" id="qb-q4">
+            <label class="question-label" for="q4">
+                <span class="q-title-blue">4.</span> Vous avez un message à nous transmettre ? Dites-nous tout !
+            </label>
+            <textarea name="q4_commentaire" id="q4" rows="4"></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">Envoyer mes réponses</button>
+        
+        <div class="footer-disclaimer">
+            * Les questions marquées d'un astérisque sont obligatoires pour la bonne prise en compte de vos réponses.<br>
+            Les réponses collectées dans le cadre de ce questionnaire sont destinées à améliorer nos services et votre expérience client et ne sont en conséquence pas anonymes. Veuillez noter que ces données seront exclusivement accessibles aux équipes et personnel Biogaran.
+        </div>
+        
+    </form>
+</div>
+
+<script>
+    window.onpageshow = function(event) {
+        if (event.persisted) { window.location.reload(); }
+    };
+
+    /* --- Validation Front-End (JavaScript) --- */
+    document.getElementById('surveyForm').addEventListener('submit', function(e) {
+        let isValid = true;
+        let errorMsg = document.getElementById('error-msg');
+        
+        document.querySelectorAll('.question-block').forEach(el => el.classList.remove('error'));
+        document.querySelectorAll('.grid-row').forEach(el => el.classList.remove('error'));
+        errorMsg.style.display = 'none';
+
+        function checkRadio(name, blockId) {
+            let radios = document.getElementsByName(name);
+            let isChecked = false;
+            for(let i=0; i<radios.length; i++) {
+                if(radios[i].checked) { isChecked = true; break; }
+            }
+            if(!isChecked) {
+                document.getElementById(blockId).classList.add('error');
+                isValid = false;
+                return false;
+            }
+            return true;
+        }
+
+        checkRadio('q1_relation', 'qb-q1_relation');
+        checkRadio('q2_travail', 'qb-q2_travail');
+        
+        let q3Names = [
+            'q3_gammeremboursee', 'q3_gammebiosim', 'q3_gammeotc',
+            'q3_offresimple', 'q3_offretransparente', 'q3_offresuivi', 'q3_engagements', 'q3_delaipaiement',
+            'q3_accompbiosim', 'q3_accompsellout', 'q3_dispoproduits', 'q3_retourrupture', 'q3_secuapprovisionnement', 'q3_simplifquot'
+        ];
+        
+        let isQ3Valid = true;
+        q3Names.forEach(function(name) {
+            if(!checkRadio(name, 'qb-' + name)) {
+                isQ3Valid = false;
+            }
+        });
+
+        if(!isQ3Valid) {
+            document.getElementById('qb-q3').classList.add('error');
+        }
+
+        if(!isValid) {
+            e.preventDefault();
+            errorMsg.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    });
+</script>
+
+</body>
+</html>
