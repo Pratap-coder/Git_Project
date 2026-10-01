@@ -4,7 +4,7 @@
     Platform.Response.SetResponseHeader("X-XSS-Protection", "1; mode=block");
     Platform.Response.SetResponseHeader("X-Content-Type-Options", "nosniff");
     Platform.Response.SetResponseHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-    Platform.Response.SetResponseHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' https://image.lp.biogaran.pro data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';");
+    Platform.Response.SetResponseHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' https://image.lp.Pratap.pro data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';");
 </script>
 
 <!--
@@ -26,7 +26,7 @@ ELSE
 ENDIF 
 
 IF EMPTY(@subKey) THEN 
-    RedirectTo("https://biogaran.pro/login") 
+    RedirectTo("https://Pratap.pro/login") 
 ENDIF 
 
 IF @isSubmitted == "true" THEN
@@ -205,9 +205,9 @@ ENDIF
   <!--%%[ ELSE ]%%-->
 
     <h1>Mes préférences de communication</h1>
-    <p>Gérez les communications que vous souhaitez recevoir de la part de Biogaran, ainsi que les canaux de votre choix (email et/ou SMS).
-    Certaines communications de nature transactionnelles sont obligatoires et nécessaires au bon suivi de votre relation commerciale et vous seront adressées de manière automatique, même en cas désactivation de toutes les communications Biogaran.<br>
-    Vérifiez vos coordonnées email/SMS dans votre espace <a href="https://biogaran.pro/login" target="_blank" style="text-decoration: none;">Mon compte > Mon profil .</a></p>
+    <p>Gérez les communications que vous souhaitez recevoir de la part de Pratap, ainsi que les canaux de votre choix (email et/ou SMS).
+    Certaines communications de nature transactionnelles sont obligatoires et nécessaires au bon suivi de votre relation commerciale et vous seront adressées de manière automatique, même en cas désactivation de toutes les communications Pratap.<br>
+    Vérifiez vos coordonnées email/SMS dans votre espace <a href="https://Pratap.pro/login" target="_blank" style="text-decoration: none;">Mon compte > Mon profil .</a></p>
 
     <!-- CORRECTED: Set Action to empty ("") to securely post to itself, preventing URL parameter losses -->
     <form method="POST" action="" id="prefForm">
@@ -239,14 +239,14 @@ ENDIF
             <!-- Order Tracking (Locked Email) -->
             <div class="card">
                 <h2>Informations commandes et livraisons*</h2>
-                <p>Je souhaite recevoir par email (obligatoire) et par SMS les informations relatives au suivi de mes commandes, suivi livraisons produits de la part de Biogaran.</p>
+                <p>Je souhaite recevoir par email (obligatoire) et par SMS les informations relatives au suivi de mes commandes, suivi livraisons produits de la part de Pratap.</p>
                 
                 <div class="toggle-row disabled">
                     <label class="switch"><input type="checkbox" checked disabled><span class="slider"></span></label>
                     <span class="label-text">Email</span>
                     
                     <div class="info-icon-wrapper">
-                        <img src="https://image.lp.biogaran.pro/lib/fe38117175640474701572/m/1/2fe43fa2-649b-4d4d-b39c-f09a5e07d0dc.png" alt="Info" class="info-icon">
+                        <img src="https://image.lp.Pratap.pro/lib/fe38117175640474701572/m/1/2fe43fa2-649b-4d4d-b39c-f09a5e07d0dc.png" alt="Info" class="info-icon">
                         <span class="tooltip-text">L’email est obligatoire pour recevoir ce type de communication</span>
                     </div>
 
@@ -262,7 +262,7 @@ ENDIF
             <!-- Notifications -->
             <div class="card">
                 <h2>Notifications*</h2>
-                <p>Je souhaite recevoir par email et/ou par SMS les informations liées à ma relation commerciale avec Biogaran (Rendez-vous avec mon délégué, Suivi de mes réclamations, ...)</p>
+                <p>Je souhaite recevoir par email et/ou par SMS les informations liées à ma relation commerciale avec Pratap (Rendez-vous avec mon délégué, Suivi de mes réclamations, ...)</p>
                 <div class="toggle-row">
                     <label class="switch"><input type="checkbox" name="notif_email" class="child-toggle" %%=IIF(@crm_notif_email == "true", "checked", "")=%%><span class="slider"></span></label>
                     <span class="label-text">Email</span>
@@ -276,7 +276,7 @@ ENDIF
             <!-- Products -->
             <div class="card">
                 <h2>Informations produits*</h2>
-                <p>Je souhaite recevoir par email et/ou par SMS les informations produits de la part de Biogaran (lancement, disponibilité et retour rupture, modification de spécialité)</p>
+                <p>Je souhaite recevoir par email et/ou par SMS les informations produits de la part de Pratap (lancement, disponibilité et retour rupture, modification de spécialité)</p>
                 <div class="toggle-row">
                     <label class="switch"><input type="checkbox" name="prod_email" class="child-toggle" %%=IIF(@crm_prod_email == "true", "checked", "")=%%><span class="slider"></span></label>
                     <span class="label-text">Email</span>
@@ -290,7 +290,7 @@ ENDIF
             <!-- Promo -->
             <div class="card">
                 <h2>Actualités promotionnelles*</h2>
-                <p>Je souhaite recevoir par email des offres de services et des informations promotionnelles de la part de Biogaran (événements, invitations, services, outils, programmes d’accompagnement, actualités divers )</p>
+                <p>Je souhaite recevoir par email des offres de services et des informations promotionnelles de la part de Pratap (événements, invitations, services, outils, programmes d’accompagnement, actualités divers )</p>
                 <div class="toggle-row">
                     <label class="switch"><input type="checkbox" name="promo_email" class="child-toggle" %%=IIF(@crm_promo_email == "true", "checked", "")=%%><span class="slider"></span></label>
                     <span class="label-text">Email</span>
@@ -306,7 +306,7 @@ ENDIF
 
         <button type="submit" class="submit-btn">Enregistrer mes préférences</button><br>
       
-      <span style="font-size: 11px; line-height: 1.5; display: inline-block; ">*En activant mes préférences, j'accepte de recevoir ces communications de la part de Biogaran, par le canal choisi sur mes coordonnées renseignées dans mon espace Mon compte > Mon profil et reconnais que mes données personnelles sont traitées et utilisées uniquement dans ce cadre.
+      <span style="font-size: 11px; line-height: 1.5; display: inline-block; ">*En activant mes préférences, j'accepte de recevoir ces communications de la part de Pratap, par le canal choisi sur mes coordonnées renseignées dans mon espace Mon compte > Mon profil et reconnais que mes données personnelles sont traitées et utilisées uniquement dans ce cadre.
       </span>
       
     </form>

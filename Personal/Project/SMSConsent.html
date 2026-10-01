@@ -4,7 +4,7 @@ var @mobileNum , @date, @replyMsg
 SET @mobileNum = MOBILE_NUMBER 
 SET @date = NOW()
 InsertData("Communication_Preferences","ID", @mobileNum, "Source", "SMS","Optin_SMS_Notifications", false,"MobilePhone", @mobileNum ,"Change_Date", @date) 
-SET @replyMsg = "Vous vous êtes désabonné(e) de tous les SMS de notification de Biogarant. Vous ne recevrez plus aucun message de notification."
+SET @replyMsg = "Vous vous êtes désabonné(e) de tous les SMS de notification de Pratap. Vous ne recevrez plus aucun message de notification."
 ]%%
 %%=v(@replyMsg)=%%
 
