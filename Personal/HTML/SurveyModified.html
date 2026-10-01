@@ -10,10 +10,10 @@ SET @email = AttributeValue("emailaddr")
 /* Fallbacks pour les tests hors contexte email */
 IF EMPTY(@subscriberKey) THEN SET @subscriberKey = RequestParameter("sk") ENDIF
 IF EMPTY(@jobId) THEN SET @jobId = 0 ENDIF
-IF EMPTY(@email) THEN SET @email = "test@biogaran.fr" ENDIF
+IF EMPTY(@email) THEN SET @email = "test@Pratap.fr" ENDIF
 
 /* Vérification si déjà soumis */
-SET @hasSubmitted = Lookup("Biogaran_Survey_Responses", "Issubmitted", "SubscriberKey", @subscriberKey, "JobId", @jobId)
+SET @hasSubmitted = Lookup("Pratap_Survey_Responses", "Issubmitted", "SubscriberKey", @subscriberKey, "JobId", @jobId)
 
 IF @hasSubmitted == "True" THEN
     /* Redirection vers LP3 (Erreur) - PageId 5307 */
@@ -27,7 +27,7 @@ IF @isSubmit == "true" THEN
     
     /* Enregistrement dans la Data Extension avec les noms de champs EXACTS du dictionnaire */
     UpsertData(
-        "Biogaran_Survey_Responses", 2, 
+        "Pratap_Survey_Responses", 2, 
         "SubscriberKey", @subscriberKey, 
         "JobId", @jobId,
         "Email", @email,
@@ -62,7 +62,7 @@ ENDIF
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Biogaran - Enquête de satisfaction</title>
+    <title>Pratap - Enquête de satisfaction</title>
     <style>
         /* Base & Reset */
         body { font-family: Arial, Helvetica, sans-serif; color: #333; margin: 0; padding: 0; background-color: #ffffff; }
@@ -101,11 +101,18 @@ ENDIF
             margin-right: -1px; /* Superpose les bordures adjacentes pour éviter le double trait */
         }
         
-        /* Couleurs de fond (les bordures ont été retirées d'ici) */
-        .bg-0-2  { background-color: #ffffff; color: #00a0d2; }
-        .bg-3-4  { background-color: #55b2e5; color: #ffffff; }
-        .bg-5-6  { background-color: #006eb6; color: #ffffff; }
-        .bg-7-10 { background-color: #002c6c; color: #ffffff; }
+        /* Dégradé de couleurs de fond et texte 0 à 10 */
+        .bg-0  { background-color: #ffffff; color: #00a0d2; }
+        .bg-1  { background-color: #d8effb; color: #00a0d2; }
+        .bg-2  { background-color: #b4e3fa; color: #00a0d2; }
+        .bg-3  { background-color: #7bb6fc; color: #ffffff; }
+        .bg-4  { background-color: #5c9df2; color: #ffffff; }
+        .bg-5  { background-color: #007dbd; color: #ffffff; }
+        .bg-6  { background-color: #0069a1; color: #ffffff; }
+        .bg-7  { background-color: #0d396b; color: #ffffff; }
+        .bg-8  { background-color: #072852; color: #ffffff; }
+        .bg-9  { background-color: #031433; color: #ffffff; }
+        .bg-10 { background-color: #00091a; color: #ffffff; }
         
         /* Bouton NC (Non Concerné) reste détaché */
         .bg-nc   { background-color: #ffffff; color: #555; border: 1px solid #999; margin-left: 12px; width: 40px !important; }
@@ -154,7 +161,7 @@ ENDIF
     
     <div class="header">
         <!-- Remplacer par l'URL de votre image hébergée dans SFMC -->
-        <img src="https://image.s50.sfmc-content.com/lib/fe3a11717564047e731476/m/1/6f35b05e-b19f-4799-b53b-db681e329a4c.png" alt="Biogaran">
+        <img src="https://image.s50.sfmc-content.com/lib/fe3a11717564047e731476/m/1/6f35b05e-b19f-4799-b53b-db681e329a4c.png" alt="Pratap">
     </div>
 
 
@@ -165,13 +172,12 @@ ENDIF
 
         <!-- Q1 -->
         <div class="question-block" id="qb-q1_relation">
-            <label class="question-label"><span class="q-title-blue">1.</span> Etes-vous satisfait de votre relation avec Biogaran ?*</label>
+            <label class="question-label"><span class="q-title-blue">1.</span> Etes-vous satisfait de votre relation avec Pratap ?*</label>
             <span class="question-sublabel">Echelle de notation : de « 0, pas du tout satisfait » à « 10 totalement satisfait »</span>
             <div class="scale-wrapper">
                 <script>
                     for(let i=0; i<=10; i++) {
-                        let bgClass = (i<=2) ? 'bg-0-2' : (i<=4 ? 'bg-3-4' : (i<=6 ? 'bg-5-6' : 'bg-7-10'));
-                        /* Ajout de la classe "scale-num" ici */
+                        let bgClass = 'bg-' + i;
                         document.write(`<input type="radio" name="q1_relation" value="${i}" id="q1_${i}"><label for="q1_${i}" class="scale-num ${bgClass}">${i}</label>`);
                     }
                 </script>
@@ -180,7 +186,7 @@ ENDIF
 
         <!-- Q2 -->
         <div class="question-block" id="qb-q2_travail">
-            <label class="question-label"><span class="q-title-blue">2.</span> Est-ce facile de travailler avec BIOGARAN au quotidien ?*</label>
+            <label class="question-label"><span class="q-title-blue">2.</span> Est-ce facile de travailler avec Pratap au quotidien ?*</label>
             <ul class="radio-list">
                 <li><input type="radio" name="q2_travail" value="Très facile" id="q2_1"><label for="q2_1">Très facile</label></li>
                 <li><input type="radio" name="q2_travail" value="Plutôt facile" id="q2_2"><label for="q2_2">Plutôt facile</label></li>
@@ -192,7 +198,7 @@ ENDIF
 
         <!-- Q3 -->
         <div class="question-block" id="qb-q3">
-            <label class="question-label"><span class="q-title-blue">3.</span> Quel niveau de satisfaction vis-à-vis de Biogaran avez-vous sur ces différents critères ?*</label>
+            <label class="question-label"><span class="q-title-blue">3.</span> Quel niveau de satisfaction vis-à-vis de Pratap avez-vous sur ces différents critères ?*</label>
             <span class="question-sublabel">Echelle de notation : de « 0, pas du tout satisfait » à « 10, totalement satisfait ». Cochez « NC » si vous n'êtes pas concerné par ce critère.</span>
             
             <script>
@@ -200,8 +206,7 @@ ENDIF
                 function renderScale(name) {
                     let html = '<div class="scale-wrapper">';
                     for(let i=0; i<=10; i++) {
-                        let bgClass = (i<=2) ? 'bg-0-2' : (i<=4 ? 'bg-3-4' : (i<=6 ? 'bg-5-6' : 'bg-7-10'));
-                        /* Ajout de la classe "scale-num" ici */
+                        let bgClass = 'bg-' + i;
                         html += `<input type="radio" name="${name}" value="${i}" id="${name}_${i}"><label for="${name}_${i}" class="scale-num ${bgClass}">${i}</label>`;
                     }
                     html += `<input type="radio" name="${name}" value="NC" id="${name}_nc"><label for="${name}_nc" class="bg-nc">NC</label></div>`;
@@ -210,7 +215,7 @@ ENDIF
             </script>
 
             <!-- SECTION : OFFRE PRODUITS -->
-            <div class="section-title">OFFRE PRODUITS BIOGARAN</div>
+            <div class="section-title">OFFRE PRODUITS Pratap</div>
             
             <div class="grid-row" id="qb-q3_gammeremboursee">
                 <div class="grid-label">Largeur et dynamique de lancement de la gamme remboursée</div>
@@ -226,7 +231,7 @@ ENDIF
             </div>
 
             <!-- SECTION : OFFRE COMMERCIALE -->
-            <div class="section-title">OFFRE COMMERCIALE BIOGARAN</div>
+            <div class="section-title">OFFRE COMMERCIALE Pratap</div>
             
             <div class="grid-row" id="qb-q3_offresimple">
                 <div class="grid-label">Simplicité de l'offre commerciale</div>
@@ -250,7 +255,7 @@ ENDIF
             </div>
 
             <!-- SECTION : ACCOMPAGNEMENT -->
-            <div class="section-title">ACCOMPAGNEMENT BIOGARAN</div>
+            <div class="section-title">ACCOMPAGNEMENT Pratap</div>
 
             <div class="grid-row" id="qb-q3_accompbiosim">
                 <div class="grid-label">Accompagnement dans la substitution des biosimilaires</div>
@@ -273,7 +278,7 @@ ENDIF
                 <div class="grid-scale"><script>renderScale('q3_secuapprovisionnement');</script></div>
             </div>
             <div class="grid-row" id="qb-q3_simplifquot">
-                <div class="grid-label">Capacité de Biogaran à simplifier votre quotidien</div>
+                <div class="grid-label">Capacité de Pratap à simplifier votre quotidien</div>
                 <div class="grid-scale"><script>renderScale('q3_simplifquot');</script></div>
             </div>
         </div>
@@ -290,10 +295,13 @@ ENDIF
         
         <div class="footer-disclaimer">
             * Les questions marquées d'un astérisque sont obligatoires pour la bonne prise en compte de vos réponses.<br>
-            Les réponses collectées dans le cadre de ce questionnaire sont destinées à améliorer nos services et votre expérience client et ne sont en conséquence pas anonymes. Veuillez noter que ces données seront exclusivement accessibles aux équipes et personnel Biogaran.
+            Les réponses collectées dans le cadre de ce questionnaire sont destinées à améliorer nos services et votre expérience client et ne sont en conséquence pas anonymes. Veuillez noter que ces données seront exclusivement accessibles aux équipes et personnel Pratap.
         </div>
         
     </form>
+    <p
+                style="font-size: 11px; line-height: 1.5; color: blue; text-align: center; padding:20px; margin-bottom: 20px">
+                PO-03799-01/26</p>
 </div>
 
 <script>

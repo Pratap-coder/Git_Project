@@ -4,7 +4,7 @@
     Platform.Response.SetResponseHeader("X-XSS-Protection", "1; mode=block");
     Platform.Response.SetResponseHeader("X-Content-Type-Options", "nosniff");
     Platform.Response.SetResponseHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-    Platform.Response.SetResponseHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' https://image.lp.biogaran.pro data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';");
+    Platform.Response.SetResponseHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' https://image.lp.Pratap.pro data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';");
 </script>
 
 <!--
@@ -12,21 +12,9 @@
 SET @subKey = AttributeValue("_subscriberKey")
 SET @email = AttributeValue("emailaddr")
 SET @isSubmitted = RequestParameter("submitted")
-SET @subKey1 = QueryParameter("subscriberKey")
-SET @email1 = QueryParameter("email") 
 
 IF EMPTY(@subKey) THEN 
-    SET @subKey = @subKey1
-    SET @email = @email1
-    SET @Source = "Site Pro"
-    SET @Canal = "Espace site"
-ELSE 
-    SET @Source = "SFMC"
-    SET @Canal = "Email"
-ENDIF 
-
-IF EMPTY(@subKey) THEN 
-    RedirectTo("https://biogaran.pro/login") 
+    RedirectTo("https://Pratap.pro/login") 
 ENDIF 
 
 IF @isSubmitted == "true" THEN
@@ -46,24 +34,11 @@ IF @isSubmitted == "true" THEN
 
         IF NOT EMPTY(@subKey) THEN
  
-           /* CORRECTED: Number of Primary Keys changed from 2 to 1 so the record actually updates */
-           UpsertData(
-                "Communication_Preferences", 1, 
-                "ID", @subKey, 
-                "Change_Date", @date,
-                "Optin_Email_Transactionnel", 1,
-                "Optin_Email_Notifications", @Notif_Email, 
-                "Optin_Email_Promotionnel", @Prod_Email, 
-                "Optin_Email_Actualités_Promotionnelles", @Promo_Email,  
-                "Optin_SMS_Transactionnel", @Order_SMS,
-                "Optin_SMS_Notifications", @Notif_SMS,
-                "Optin_SMS_Promotionnel", @Prod_SMS, 
-                "Email", @email
-            )
+           UpsertData("Communication_Preferences",2, "ID", @subKey, "Change_Date", @date,"Optin_Email_Transactionnel",1,"Optin_Email_Notifications", @Notif_Email, "Optin_Email_Promotionnel", @Prod_Email, "Optin_Email_Actualités_Promotionnelles", @Promo_Email,  "Optin_SMS_Transactionnel", @Order_SMS,"Optin_SMS_Notifications", @Notif_SMS,"Optin_SMS_Promotionnel", @Prod_SMS, "Email", @email  )
             
-            
-            
-            SET @updateCRM = UpdateSingleSalesforceObject(
+            /* Update CRM Data */
+               
+            UpdateSingleSalesforceObject(
                 "Contact", @subKey,
                 "OptinSMSTransactionnel__c", @Order_SMS,
                 "OptinSMSPromotionnel__c", @Prod_SMS,
@@ -71,8 +46,8 @@ IF @isSubmitted == "true" THEN
                 "OptinEmailNotifications__c", @Notif_Email,
                 "OptinEmailPromotionnel__c", @Prod_Email,
                 "OptinEmailActualitesPromotionnelles__c", @Promo_Email,
-                "SourceConsentement__c", @Source,
-                "Canal__c", @Canal
+                "SourceConsentement__c", "SFMC",
+                "Canal__c", "Email"
             )
            
         ENDIF
@@ -98,13 +73,14 @@ ELSE
         IF RowCount(@contactRS) > 0 THEN
            
             SET @contactRow = Row(@contactRS, 1)
-            SET @crm_order_sms   = Lowercase(Field(@contactRow, "OptinSMSTransactionnel__c"))
-            SET @crm_prod_sms    = Lowercase(Field(@contactRow, "OptinSMSPromotionnel__c"))
-            SET @crm_notif_sms   = Lowercase(Field(@contactRow, "OptinSmsNotifications__c"))
-            SET @crm_notif_email = Lowercase(Field(@contactRow, "OptinEmailNotifications__c"))
-            SET @crm_prod_email  = Lowercase(Field(@contactRow, "OptinEmailPromotionnel__c"))
-            SET @crm_promo_email = Lowercase(Field(@contactRow, "OptinEmailActualitesPromotionnelles__c"))
+            SET @crm_order_sms   = lowercase(Field(@contactRow, "OptinSMSTransactionnel__c"))
+            SET @crm_prod_sms    = lowercase(Field(@contactRow, "OptinSMSPromotionnel__c"))
+            SET @crm_notif_sms    = lowercase(Field(@contactRow, "OptinSmsNotifications__c"))
+            SET @crm_notif_email = lowercase(Field(@contactRow, "OptinEmailNotifications__c"))
+            SET @crm_prod_email = lowercase(Field(@contactRow, "OptinEmailPromotionnel__c"))
+            SET @crm_promo_email = lowercase(Field(@contactRow, "OptinEmailActualitesPromotionnelles__c"))
            
+
         ENDIF
     ENDIF
 ENDIF
@@ -135,14 +111,18 @@ ENDIF
         .btn-return { background-color: #e6007e; color: #ffffff; border: none; padding: 12px 24px; border-radius: 4px; font-size: 13px; font-weight: normal; cursor: pointer; text-decoration: none; display: inline-block; transition: background-color 0.3s ease; }
         .btn-return:hover { background-color: #cc006f; }
         
+       
         .master-toggle { background: #ebf5ff; padding: 15px 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px; margin-bottom: 30px; font-weight: bold; font-size: 14px; border: 1px solid #d0e7ff; line-height: 1.4;}
 
+     
         .pref-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
 
         .card { background: #F5F7FF; border-radius: 8px; padding: 20px; border: 1px solid #eef2f6; box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
         .card h2 { font-size: 16px; margin: 0 0 10px 0; }
         .card p { font-size: 13px; color: #666; margin-bottom: 20px; flex-grow: 1; line-height: 1.4;}
 
+      
         .toggle-row { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; background: #fff; border: 1px solid #f0f0f0; padding: 10px; border-radius: 6px; position: relative;}
         .toggle-row.disabled { opacity: 0.7; background: #fafafa; }
         
@@ -196,27 +176,22 @@ ENDIF
 <div class="container">
     
   <!--%%[ IF @isSubmitted == "true" THEN ]%%-->
-  <div class="confirmation-box">
+        <div class="confirmation-box">
     <h2 class="title">Votre mise à jour a été prise en compte</h2>
     <p class="subtitle">Vos préférences de communication ont bien été enregistrées. <br> Vous pouvez les modifier à tout moment. </p>
     <button class="btn-return" onclick="window.location.href='%%=CloudPagesURL(17233)=%%'">Je mets à jour mes préférences</button>
-  </div>
+</div>
 
-  <!--%%[ ELSE ]%%-->
+   <!--%%[ ELSE ]%%-->
 
     <h1>Mes préférences de communication</h1>
-    <p>Gérez les communications que vous souhaitez recevoir de la part de Biogaran, ainsi que les canaux de votre choix (email et/ou SMS).
-    Certaines communications de nature transactionnelles sont obligatoires et nécessaires au bon suivi de votre relation commerciale et vous seront adressées de manière automatique, même en cas désactivation de toutes les communications Biogaran.<br>
-    Vérifiez vos coordonnées email/SMS dans votre espace <a href="https://biogaran.pro/login" target="_blank" style="text-decoration: none;">Mon compte > Mon profil .</a></p>
+    <p>Gérez les communications que vous souhaitez recevoir de la part de Pratap, ainsi que les canaux de votre choix (email et/ou SMS).
+    Certaines communications de nature transactionnelles sont obligatoires et nécessaires au bon suivi de votre relation commerciale et vous seront adressées de manière automatique, même en cas désactivation de toutes les communications Pratap.<br>
+    Vérifiez vos coordonnées email/SMS dans votre espace <a href="https://Pratap.pro/login" target="_blank" style="text-decoration: none;">Mon compte > Mon profil .</a></p>
 
-    <!-- CORRECTED: Set Action to empty ("") to securely post to itself, preventing URL parameter losses -->
-    <form method="POST" action="" id="prefForm">
+    <form method="POST" action="%%=RequestParameter('PAGEURL')=%%" id="prefForm">
         <input type="hidden" name="submitted" value="true">
         
-        <!-- CORRECTED: Added to ensure Context survives the Form Post when coming from an outside link -->
-        <input type="hidden" name="subscriberKey" value="%%=v(@subKey)=%%">
-        <input type="hidden" name="email" value="%%=v(@email)=%%">
-
         <!-- BOT PROTECTION: Invisible field -->
         <div style="display:none;">
             <input type="text" name="mid_name_field" value="">
@@ -229,24 +204,22 @@ ENDIF
             </label>
             <span>J'active ou désactive toutes les communications et canaux d'envoi.</span>
         </div>
-        
-        <div id="unsavedWarning" style="display:none; color:red; margin-bottom:10px;">
-          Vos préférences ont été modifiées mais ne sont pas encore enregistrées.
-          Cliquez sur “Enregistrer mes préférences” pour confirmer vos choix.
-        </div>
-        
+<div id="unsavedWarning" style="display:none; color:red; margin-bottom:10px;">
+  Vos préférences ont été modifiées mais ne sont pas encore enregistrées.
+  Cliquez sur “Enregistrer mes préférences” pour confirmer vos choix.
+</div>
         <div class="pref-grid">
             <!-- Order Tracking (Locked Email) -->
             <div class="card">
                 <h2>Informations commandes et livraisons*</h2>
-                <p>Je souhaite recevoir par email (obligatoire) et par SMS les informations relatives au suivi de mes commandes, suivi livraisons produits de la part de Biogaran.</p>
+                <p>Je souhaite recevoir par email (obligatoire) et par SMS les informations relatives au suivi de mes commandes, suivi livraisons produits de la part de Pratap.</p>
                 
                 <div class="toggle-row disabled">
                     <label class="switch"><input type="checkbox" checked disabled><span class="slider"></span></label>
                     <span class="label-text">Email</span>
                     
                     <div class="info-icon-wrapper">
-                        <img src="https://image.lp.biogaran.pro/lib/fe38117175640474701572/m/1/2fe43fa2-649b-4d4d-b39c-f09a5e07d0dc.png" alt="Info" class="info-icon">
+                        <img src="https://image.lp.Pratap.pro/lib/fe38117175640474701572/m/1/2fe43fa2-649b-4d4d-b39c-f09a5e07d0dc.png" alt="Info" class="info-icon">
                         <span class="tooltip-text">L’email est obligatoire pour recevoir ce type de communication</span>
                     </div>
 
@@ -262,7 +235,7 @@ ENDIF
             <!-- Notifications -->
             <div class="card">
                 <h2>Notifications*</h2>
-                <p>Je souhaite recevoir par email et/ou par SMS les informations liées à ma relation commerciale avec Biogaran (Rendez-vous avec mon délégué, Suivi de mes réclamations, ...)</p>
+                <p>Je souhaite recevoir par email et/ou par SMS les informations liées à ma relation commerciale avec Pratap (Rendez-vous avec mon délégué, Suivi de mes réclamations, ...)</p>
                 <div class="toggle-row">
                     <label class="switch"><input type="checkbox" name="notif_email" class="child-toggle" %%=IIF(@crm_notif_email == "true", "checked", "")=%%><span class="slider"></span></label>
                     <span class="label-text">Email</span>
@@ -276,7 +249,7 @@ ENDIF
             <!-- Products -->
             <div class="card">
                 <h2>Informations produits*</h2>
-                <p>Je souhaite recevoir par email et/ou par SMS les informations produits de la part de Biogaran (lancement, disponibilité et retour rupture, modification de spécialité)</p>
+                <p>Je souhaite recevoir par email et/ou par SMS les informations produits de la part de Pratap (lancement, disponibilité et retour rupture, modification de spécialité)</p>
                 <div class="toggle-row">
                     <label class="switch"><input type="checkbox" name="prod_email" class="child-toggle" %%=IIF(@crm_prod_email == "true", "checked", "")=%%><span class="slider"></span></label>
                     <span class="label-text">Email</span>
@@ -290,7 +263,7 @@ ENDIF
             <!-- Promo -->
             <div class="card">
                 <h2>Actualités promotionnelles*</h2>
-                <p>Je souhaite recevoir par email des offres de services et des informations promotionnelles de la part de Biogaran (événements, invitations, services, outils, programmes d’accompagnement, actualités divers )</p>
+                <p>Je souhaite recevoir par email des offres de services et des informations promotionnelles de la part de Pratap (événements, invitations, services, outils, programmes d’accompagnement, actualités divers )</p>
                 <div class="toggle-row">
                     <label class="switch"><input type="checkbox" name="promo_email" class="child-toggle" %%=IIF(@crm_promo_email == "true", "checked", "")=%%><span class="slider"></span></label>
                     <span class="label-text">Email</span>
@@ -306,7 +279,7 @@ ENDIF
 
         <button type="submit" class="submit-btn">Enregistrer mes préférences</button><br>
       
-      <span style="font-size: 11px; line-height: 1.5; display: inline-block; ">*En activant mes préférences, j'accepte de recevoir ces communications de la part de Biogaran, par le canal choisi sur mes coordonnées renseignées dans mon espace Mon compte > Mon profil et reconnais que mes données personnelles sont traitées et utilisées uniquement dans ce cadre.
+      <span style="font-size: 11px; line-height: 1.5; display: inline-block; ">*En activant mes préférences, j'accepte de recevoir ces communications de la part de Pratap, par le canal choisi sur mes coordonnées renseignées dans mon espace Mon compte > Mon profil et reconnais que mes données personnelles sont traitées et utilisées uniquement dans ce cadre.
       </span>
       
     </form>
